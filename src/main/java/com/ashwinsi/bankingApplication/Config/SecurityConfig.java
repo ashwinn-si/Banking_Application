@@ -21,15 +21,18 @@ import java.util.List;
 public class SecurityConfig {
   private JwtFilter jwtFilter;
   private AdminFilter adminFilter;
+  private EnvConfig envConfig;
 
-  SecurityConfig(JwtFilter jwtFilter, AdminFilter adminFilter) {
+  SecurityConfig(JwtFilter jwtFilter, AdminFilter adminFilter, EnvConfig envConfig) {
     this.jwtFilter = jwtFilter;
     this.adminFilter = adminFilter;
+    this.envConfig = envConfig;
   }
 
   @Bean
   public PasswordEncoder passwordEncoder() {
-    return new BCryptPasswordEncoder(10);
+    Integer SALT = envConfig.getSalt();
+    return new BCryptPasswordEncoder(SALT);
   }
 
   @Bean

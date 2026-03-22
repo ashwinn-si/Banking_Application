@@ -1,5 +1,6 @@
 package com.ashwinsi.bankingApplication.Utils;
 
+import com.ashwinsi.bankingApplication.Config.EnvConfig;
 import com.ashwinsi.bankingApplication.DTO.JwtDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -12,8 +13,16 @@ import java.util.Map;
 
 @Component
 public class JwtService {
-    private String JWT_SECRET = "asdsadasdsadadsd";
-    private Integer JWT_EXP = 1000 * 60 * 60 * 30;
+
+    private EnvConfig envConfig;
+    private String JWT_SECRET;
+    private Long JWT_EXP;
+
+    JwtService(EnvConfig envConfig){
+        this.envConfig = envConfig;
+        this.JWT_SECRET = envConfig.getJwtSecret();
+        this.JWT_EXP = envConfig.getJwtExpirationTime();
+    }
 
 
     public String generateJWTToken(Long userId, String role){
