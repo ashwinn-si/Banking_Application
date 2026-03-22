@@ -7,7 +7,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -27,7 +26,7 @@ public class JwtFilter extends OncePerRequestFilter {
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
     String path = request.getServletPath();
-    return path.startsWith("/auth/") || path.startsWith("/api/auth/");
+    return path.startsWith("/api/auth/");
   }
 
   @Override
@@ -46,6 +45,8 @@ public class JwtFilter extends OncePerRequestFilter {
       return;
     }
 
+    System.out.println(token);
+
     Boolean isValidToken = jwtService.isValidToken(token);
 
     if (!isValidToken) {
@@ -53,7 +54,14 @@ public class JwtFilter extends OncePerRequestFilter {
       return;
     }
 
-    JwtDTO jwtDTO = jwtService.parseJWTToken(token);
+    JwtDTO jwtDTO;
+    try {
+      jwtDTO = jwtService.parseJWTToken(token);
+    } catch (Exception e) {
+      response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+      return;
+    }
+
     UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
         jwtDTO,
         null,

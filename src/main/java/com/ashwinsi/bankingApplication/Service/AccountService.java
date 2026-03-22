@@ -25,7 +25,7 @@ public class AccountService {
         this.userService = userService;
     }
 
-    List<AccountDTO> getAllAccount(UUID userId) throws Exception {
+    public List<AccountDTO> getAllAccount(UUID userId) throws Exception {
         Boolean isUserExists = userService.isUserExists(userId, null, null);
         if(!isUserExists){
             throw new CustomError("USER NOT FOUND", HttpStatus.NOT_FOUND);
@@ -41,13 +41,18 @@ public class AccountService {
         return accountDTOs;
     }
 
-    AccountDTO getAccount(UUID accountId) throws Exception{
+    public AccountDTO getAccount(UUID accountId, UUID userId) throws Exception{
         Account account = findAccount(accountId);
+        User user = account.getUser();
+
+        if(!user.getId().equals(userId)){
+            throw new CustomError("ACCOUNT IS NOT MAPPED TO THE USER",HttpStatus.UNAUTHORIZED);
+        }
         return new AccountDTO(account.getId(), account.getBalance(), account.isBlocked());
     }
 
     @Transactional
-    void createAccount(UUID userId) throws Exception {
+    public void createAccount(UUID userId) throws Exception {
         User user = userService.findUser(userId, null, null);
         List<AccountDTO> allAccounts = getAllAccount(user.getId());
 
@@ -65,16 +70,20 @@ public class AccountService {
     }
 
 
-    boolean isAccountExists(UUID accountId){
+    public boolean isAccountExists(UUID accountId){
         Optional<Account> account = accountRepository.findById(accountId);
         return account.isPresent();
     }
 
-    Account findAccount(UUID accountId) throws Exception{
+    public Account findAccount(UUID accountId) throws Exception{
         Account account = accountRepository.findById(accountId).orElseThrow(() ->
                 new CustomError("Account Not Found", HttpStatus.NOT_FOUND)
         );
         return account;
+    }
+
+    public boolean isAccountMappedUser(UUID accountId, UUID userId){
+        return accountRepository.findByIdAndUserId(accountId, userId).isPresent();
     }
 
 
