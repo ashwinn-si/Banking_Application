@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,56 +19,57 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private JwtFilter jwtFilter;
-    private AdminFilter adminFilter;
+  private JwtFilter jwtFilter;
+  private AdminFilter adminFilter;
 
-    SecurityConfig(JwtFilter jwtFilter, AdminFilter adminFilter){
-        this.jwtFilter = jwtFilter;
-        this.adminFilter = adminFilter;
-    }
+  SecurityConfig(JwtFilter jwtFilter, AdminFilter adminFilter) {
+    this.jwtFilter = jwtFilter;
+    this.adminFilter = adminFilter;
+  }
 
-    @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder(10);
-    }
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder(10);
+  }
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration();
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowCredentials(true);
+    config.setAllowCredentials(true);
 
-        config.setAllowedHeaders(List.of("*"));
+    config.setAllowedHeaders(List.of("*"));
 
-        config.setAllowedMethods(List.of("GET", "PUT", "DELETE", "POST"));
+    config.setAllowedMethods(List.of("GET", "PUT", "DELETE", "POST"));
 
-        //TODO need to add production env later
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+    // TODO need to add production env later
+    config.setAllowedOrigins(List.of("http://localhost:5173"));
 
-        config.setMaxAge(3600L);
+    config.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration("/**", config);
+    source.registerCorsConfiguration("/**", config);
 
-        return source;
-    }
+    return source;
+  }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        http
-                // needed to be disabled for jwt based login
-                .csrf(c -> c.disable())
-                .cors(c -> c.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login").permitAll()
-                        .requestMatchers("/signup").permitAll()
-                        .anyRequest().authenticated()
+    http
+        // needed to be disabled for jwt based login
+        .csrf(c -> c.disable())
+        .cors(c -> c.configurationSource(corsConfigurationSource()))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers("/login").permitAll()
+            .requestMatchers("/signup").permitAll()
+            .anyRequest().authenticated()
 
-                ).addFilterBefore(jwtFilter, JwtFilter.class)
-                .addFilterAfter(adminFilter, AdminFilter.class);
+        )
+        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+        .addFilterAfter(adminFilter, JwtFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+  }
 }
