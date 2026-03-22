@@ -1,14 +1,13 @@
-package com.ashwinsi.bankingApplication.Repository;
+package com.ashwinsi.bankingApplication.Domain;
 
-import com.ashwinsi.bankingApplication.DTO.RoleEnum;
+import com.ashwinsi.bankingApplication.DTO.Enum.RoleEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,6 +21,9 @@ public class User {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  @Column(nullable = false)
+  private String name;
+
   @Column(nullable = false, unique = true, length = 120)
   private String email;
 
@@ -34,21 +36,27 @@ public class User {
   @Column(length = 255)
   private String address;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  private RoleEnum role = RoleEnum.USER;
-
   @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
-  private List<Account> accountList;
+  private List<Account> accountList = new ArrayList<>();
 
   @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY)
-  private List<Transaction> sentTransactions;
+  private List<Transaction> sentTransactions = new ArrayList<>();
 
   @OneToMany(mappedBy = "receiver", fetch = FetchType.LAZY)
-  private List<Transaction> receivedTransactions;
+  private List<Transaction> receivedTransactions = new ArrayList<>();
 
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
+
+  private boolean isActivated = true;
+
+  public User(String name, String email, String hashPassword, String phoneNumber, String address) {
+    this.name = name;
+    this.email = email;
+    this.password = hashPassword;
+    this.phoneNumber = phoneNumber;
+    this.address = address;
+  }
 
   @PrePersist
   void onCreate() {

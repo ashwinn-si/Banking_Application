@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class JwtService {
@@ -25,7 +26,7 @@ public class JwtService {
     }
 
 
-    public String generateJWTToken(Long userId, String role){
+    public String generateJWTToken(UUID userId, String role){
         Map<String, Object> claims = new HashMap<>();
 
         claims.put("userId", userId);

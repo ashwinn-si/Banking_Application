@@ -21,7 +21,8 @@ class ResponseData <T>{
 @Component
 public class ResponseHandler {
 
-    public static <T> ResponseEntity<?> handleResponse(HttpStatus status, T data, String message, Boolean success){
-        return ResponseEntity.status(status).body(new ResponseData(data, message, success));
+    public static <T> ResponseEntity<?> handleResponse(HttpStatus status, T data, String message, T success){
+
+        return ResponseEntity.status(status).body(new ResponseData(data, message, success == null ? true : (Boolean) success));
     }
 }

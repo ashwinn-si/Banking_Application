@@ -1,7 +1,7 @@
-package com.ashwinsi.bankingApplication.Repository;
+package com.ashwinsi.bankingApplication.Domain;
 
-import com.ashwinsi.bankingApplication.DTO.TransactionStatusEnum;
-import com.ashwinsi.bankingApplication.DTO.TransactionTypeEnum;
+import com.ashwinsi.bankingApplication.DTO.Enum.TransactionStatusEnum;
+import com.ashwinsi.bankingApplication.DTO.Enum.TransactionTypeEnum;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

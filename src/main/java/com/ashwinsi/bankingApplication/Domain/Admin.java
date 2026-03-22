@@ -1,4 +1,4 @@
-package com.ashwinsi.bankingApplication.Repository;
+package com.ashwinsi.bankingApplication.Domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;

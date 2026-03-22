@@ -1,4 +1,4 @@
-package com.ashwinsi.bankingApplication.Repository;
+package com.ashwinsi.bankingApplication.Domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -22,10 +22,10 @@ public class Account {
   private UUID id;
 
   @Column(nullable = false, precision = 19, scale = 2)
-  private BigDecimal balance = BigDecimal.ZERO;
+  private Long balance = 0L;
 
   @Column(nullable = false)
-  private boolean blocked = false;
+  private boolean isBlocked = false;
 
   @Column(nullable = false)
   private long version = 0L;

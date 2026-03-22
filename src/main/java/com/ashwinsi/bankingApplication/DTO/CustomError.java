@@ -10,7 +10,7 @@ public class CustomError extends  Exception{
     private String message;
     private HttpStatus status;
 
-    CustomError(String message, HttpStatus status){
+    public CustomError(String message, HttpStatus status){
         super(message);
         this.status = status;
         this.message = message;

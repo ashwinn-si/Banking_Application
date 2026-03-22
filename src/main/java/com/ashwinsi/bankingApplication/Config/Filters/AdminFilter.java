@@ -15,8 +15,20 @@ import java.io.IOException;
 public class AdminFilter extends OncePerRequestFilter {
 
   @Override
+  protected boolean shouldNotFilter(HttpServletRequest request) {
+    String path = request.getServletPath();
+    return path.startsWith("/auth/") || path.startsWith("/api/auth/");
+  }
+
+  @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
+
+    if (SecurityContextHolder.getContext().getAuthentication() == null
+        || !(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof JwtDTO)) {
+      filterChain.doFilter(request, response);
+      return;
+    }
 
     JwtDTO jwtDTO = (JwtDTO) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 

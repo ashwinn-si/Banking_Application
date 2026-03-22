@@ -11,11 +11,11 @@ public class BcryptService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    String generateEncodedPassword(String password){
+    public String generateEncodedPassword(String password){
         return passwordEncoder.encode(password);
     }
 
-    Boolean checkEncodedPassword(String encodedPassword, String rawPassword){
+    public Boolean checkEncodedPassword(String encodedPassword, String rawPassword){
         return passwordEncoder.matches(rawPassword, encodedPassword);
     }
 }
