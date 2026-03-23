@@ -29,8 +29,8 @@ public class Account {
   @Column(nullable = false)
   private boolean isBlocked = false;
 
-  @Column(nullable = false)
-  private long version = 0L;
+  @Version
+  private long version;
 
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)

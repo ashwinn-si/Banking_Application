@@ -60,4 +60,11 @@ public class Transaction {
   void onCreate() {
     this.createdAt = LocalDateTime.now();
   }
+
+  public void startDeposit(Account senderAccount){
+    this.senderAccount = senderAccount;
+    this.amount = 0L;
+    this.transactionType = TransactionTypeEnum.DEPOSIT;
+    this.transactionStatus = TransactionStatusEnum.STARTED;
+  }
 }
