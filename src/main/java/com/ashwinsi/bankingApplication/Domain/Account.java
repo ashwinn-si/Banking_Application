@@ -9,6 +9,8 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -39,6 +41,12 @@ public class Account {
 
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
+
+  @OneToMany(mappedBy = "senderAccount", fetch = FetchType.LAZY)
+  private List<Transaction> sentTransactions = new ArrayList<>();
+
+  @OneToMany(mappedBy = "receiverAccount", fetch = FetchType.LAZY)
+  private List<Transaction> receivedTransactions = new ArrayList<>();
 
   @PrePersist
   void onCreate() {

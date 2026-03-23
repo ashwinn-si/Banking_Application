@@ -39,12 +39,6 @@ public class User {
   @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
   private List<Account> accountList = new ArrayList<>();
 
-  @OneToMany(mappedBy = "sender", fetch = FetchType.LAZY)
-  private List<Transaction> sentTransactions = new ArrayList<>();
-
-  @OneToMany(mappedBy = "receiver", fetch = FetchType.LAZY)
-  private List<Transaction> receivedTransactions = new ArrayList<>();
-
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 

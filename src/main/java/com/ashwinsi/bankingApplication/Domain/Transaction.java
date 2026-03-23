@@ -24,23 +24,27 @@ public class Transaction {
   private UUID id;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "sender_id")
+  @JoinColumn(name = "sender_account_id")
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
-  private User sender;
+  private Account senderAccount;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "receiver_id")
+  @JoinColumn(name = "receiver_account_id")
   @ToString.Exclude
   @EqualsAndHashCode.Exclude
-  private User receiver;
+  private Account receiverAccount;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 30)
   private TransactionTypeEnum transactionType;
 
-  @Column(nullable = false, precision = 19, scale = 2)
-  private BigDecimal amount;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 30)
+  private TransactionStatusEnum transactionStatus;
+
+  @Column(nullable = false)
+  private Long amount;
 
   @Column(nullable = false, length = 500)
   private String comments = "";
