@@ -66,4 +66,11 @@ public class Transaction {
         this.amount = 0L;
         this.transactionStatus = TransactionStatusEnum.STARTED;
     }
+
+    public void startTranscation(Account senderAccount, Account receiverAccount) {
+        this.senderAccount = senderAccount;
+        this.receiverAccount = receiverAccount;
+        this.amount = 0L;
+        this.transactionStatus = TransactionStatusEnum.STARTED;
+    }
 }

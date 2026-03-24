@@ -19,19 +19,20 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-class DepositStartDTO{
+class TransactionStartDTO{
     private UUID accountId;
+    private UUID receiverAccountId;
 }
 
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-class TranscationDTO{
-    private UUID senderId;
+class TransactionDTO{
+    private UUID senderAccountId;
     private Long amount;
     private UUID transactionId;
-    private UUID receiverId;
+    private UUID receiverAccountId;
 }
 
 @RestController
@@ -57,30 +58,39 @@ public class TransactionController {
     }
 
     @PostMapping("/start-withdraw")
-    ResponseEntity<?> withdrawStart(@RequestBody @Validated DepositStartDTO depositDTO) throws Exception {
+    ResponseEntity<?> withdrawStart(@RequestBody @Validated TransactionStartDTO transactionDTO) throws Exception {
         return ResponseHandler.handleResponse(HttpStatus.OK,
-                transcationService.startTransaction(depositDTO.getAccountId(), TransactionTypeEnum.WITHDRAW), "Transaction Started");
+                transcationService.startTransaction(transactionDTO.getAccountId(), TransactionTypeEnum.WITHDRAW), "Transaction Started");
     }
 
-
-    //TODO NEED TO CHECK IF ALL THE USER HAS ACCESS TO THE ACCOUNT ONLY ON WITHDRAW
     @PostMapping("/withdraw")
-    ResponseEntity<?> withdraw(@RequestBody @Validated TranscationDTO depositDTO) throws Exception {
-        transcationService.withdraw(depositDTO.getAmount(), depositDTO.getSenderId(), depositDTO.getTransactionId());
+    ResponseEntity<?> withdraw(@RequestBody @Validated TransactionDTO transactionDTO) throws Exception {
+        transcationService.withdraw(transactionDTO.getAmount(), transactionDTO.getSenderAccountId(), transactionDTO.getTransactionId());
         return ResponseHandler.handleResponse(HttpStatus.OK, null, "Withdraw Sucessfull");
     }
 
     // TODO ONLY ADMIN CAN DEPOSIT
     @PostMapping("/start-deposit")
-    ResponseEntity<?> depositStart(@RequestBody @Validated DepositStartDTO depositDTO) throws Exception {
+    ResponseEntity<?> depositStart(@RequestBody @Validated TransactionStartDTO transactionDTO) throws Exception {
         return ResponseHandler.handleResponse(HttpStatus.OK,
-                transcationService.startTransaction(depositDTO.getAccountId(), TransactionTypeEnum.DEPOSIT), "Transaction Started");
+                transcationService.startTransaction(transactionDTO.getAccountId(), TransactionTypeEnum.DEPOSIT), "Transaction Started");
     }
 
-
     @PostMapping("/deposit")
-    ResponseEntity<?> deposit(@RequestBody @Validated TranscationDTO depositDTO) throws  Exception{
-        transcationService.deposit(depositDTO.getAmount(), depositDTO.getSenderId(), depositDTO.getTransactionId());
+    ResponseEntity<?> deposit(@RequestBody @Validated TransactionDTO depositDTO) throws  Exception{
+        transcationService.deposit(depositDTO.getAmount(), depositDTO.getSenderAccountId(), depositDTO.getTransactionId());
         return ResponseHandler.handleResponse(HttpStatus.OK, null, "Amount Successfully Deposited");
+    }
+
+    @PostMapping("/start-transfer")
+    ResponseEntity<?> transferStart(@RequestBody @Validated TransactionStartDTO transactionDTO) throws Exception {
+        return ResponseHandler.handleResponse(HttpStatus.OK,
+                transcationService.startTransaction(transactionDTO.getAccountId(), transactionDTO.getReceiverAccountId(), TransactionTypeEnum.TRANSACTION), "Transaction Started");
+    }
+
+    @PostMapping("/transfer")
+    ResponseEntity<?> transfer(@RequestBody @Validated TransactionDTO transactionDTO) throws Exception {
+        transcationService.transfer(transactionDTO.getAmount(), transactionDTO.getSenderAccountId(), transactionDTO.getReceiverAccountId(), transactionDTO.getTransactionId());
+        return ResponseHandler.handleResponse(HttpStatus.OK, null, "Transfer Successful");
     }
 }

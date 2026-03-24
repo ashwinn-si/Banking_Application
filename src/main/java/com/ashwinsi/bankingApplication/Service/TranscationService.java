@@ -79,7 +79,7 @@ class GetAllTransactionDTO {
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-class DepositStartDTO {
+class TransactionStartDTO {
     private UUID transcationId;
 }
 
@@ -96,10 +96,10 @@ public class TranscationService {
     }
 
     @Transactional
-    public DepositStartDTO startTransaction(UUID depositId, TransactionTypeEnum transactionTypeEnum)
+    public TransactionStartDTO startTransaction(UUID depositAccountId, TransactionTypeEnum transactionTypeEnum)
             throws Exception {
-        Account senderAccount = accountService.findAccount(depositId);
-        
+        Account senderAccount = accountService.findAccount(depositAccountId);
+
         if(senderAccount.isBlocked()){
             throw new CustomError("Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
         }
@@ -110,11 +110,33 @@ public class TranscationService {
 
         Transaction savedTranscation = transactionRepository.save(transaction);
 
-        return new DepositStartDTO(savedTranscation.getId());
+        return new TransactionStartDTO(savedTranscation.getId());
     }
 
-    //TODO need to check if the account is blocked before starting the transaction
-    private boolean isValidTranscation(UUID transcationId, TransactionTypeEnum transactionType)
+    @Transactional
+    public TransactionStartDTO startTransaction(UUID senderAccountId, UUID receiverAccountId, TransactionTypeEnum transactionTypeEnum)
+            throws Exception {
+        Account senderAccount = accountService.findAccount(senderAccountId);
+        Account receiverAccount = accountService.findAccount(receiverAccountId);
+
+        if(senderAccount.isBlocked()){
+            throw new CustomError("Sender Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
+        }
+
+        if(receiverAccount.isBlocked()){
+            throw new CustomError("Receiver Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
+        }
+
+        Transaction transaction = new Transaction();
+        transaction.setTransactionType(transactionTypeEnum);
+        transaction.startTranscation(senderAccount, receiverAccount);
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        return new TransactionStartDTO(savedTransaction.getId());
+    }
+
+    private Transaction isValidTranscation(UUID transcationId, TransactionTypeEnum transactionType)
             throws Exception {
         Transaction transaction = findTransaction(transcationId);
         try{
@@ -129,17 +151,21 @@ public class TranscationService {
                 transaction.setComments("Transaction expired. Time limit of 5 minutes exceeded");
                 throw new CustomError("Transaction expired. Time limit of 5 minutes exceeded", HttpStatus.BAD_REQUEST);
             }
+            if(transaction.getTransactionStatus() != TransactionStatusEnum.STARTED){
+                throw new CustomError("Idempotency Rule is stopping the execution", HttpStatus.BAD_REQUEST);
+            }
+
+            return transaction;
         }catch(Exception e){
             transactionRepository.save(transaction);
             throw e;
         }
 
-        return transaction.getTransactionStatus() == TransactionStatusEnum.STARTED;
     }
 
 
     @Transactional
-    public void updateTranscationStatus(UUID transactionId,
+    public void updateTransactionStatus(UUID transactionId,
             TransactionStatusEnum transactionStatusEnum) throws Exception {
         Transaction transaction = findTransaction(transactionId);
         transaction.setTransactionStatus(transactionStatusEnum);
@@ -153,36 +179,55 @@ public class TranscationService {
         transactionRepository.save(transaction);
     }
 
-    public void deposit(Long depositAmount, UUID depositId, UUID transactionId) throws Exception {
-        boolean isValidTransaction = isValidTranscation(transactionId, TransactionTypeEnum.DEPOSIT);
-        if (!isValidTransaction) {
-            throw new CustomError("Idempotency law stopping the execution", HttpStatus.BAD_REQUEST);
-        }
-        updateTranscationStatus(transactionId, TransactionStatusEnum.TRANSCATION_STARTED);
+    public void deposit(Long depositAmount, UUID depositAccountId, UUID transactionId) throws Exception {
+        isValidTranscation(transactionId, TransactionTypeEnum.DEPOSIT);
+
+        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSCATION_STARTED);
+
         try {
-            accountService.updateAccountBalance(depositId, depositAmount);
-            updateTranscationStatus(transactionId, TransactionStatusEnum.COMPLETED);
+            accountService.updateAccountBalance(depositAccountId, depositAmount);
+            updateTransactionStatus(transactionId, TransactionStatusEnum.COMPLETED);
         } catch (Exception e) {
             updateTransactionComment(transactionId, "inconsistency issue");
-            updateTranscationStatus(transactionId, TransactionStatusEnum.FAILED);
+            updateTransactionStatus(transactionId, TransactionStatusEnum.FAILED);
             throw e;
         }
     }
 
-    public void withdraw(Long withdrawAmount, UUID depositId, UUID transactionId) throws Exception {
-        boolean isValidTransaction = isValidTranscation(transactionId, TransactionTypeEnum.WITHDRAW);
-        if (!isValidTransaction) {
-            throw new CustomError("Idempotency law stopping the execution", HttpStatus.BAD_REQUEST);
-        }
-        updateTranscationStatus(transactionId, TransactionStatusEnum.TRANSCATION_STARTED);
+    public void withdraw(Long withdrawAmount, UUID withdrawAccountId, UUID transactionId) throws Exception {
+        isValidTranscation(transactionId, TransactionTypeEnum.WITHDRAW);
+
+        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSCATION_STARTED);
         try {
-            accountService.updateAccountBalance(depositId, withdrawAmount * -1);
-            updateTranscationStatus(transactionId, TransactionStatusEnum.COMPLETED);
+            accountService.updateAccountBalance(withdrawAccountId, withdrawAmount * -1);
+            updateTransactionStatus(transactionId, TransactionStatusEnum.COMPLETED);
         } catch (Exception e) {
             updateTransactionComment(transactionId, e.getMessage());
-            updateTranscationStatus(transactionId, TransactionStatusEnum.FAILED);
+            updateTransactionStatus(transactionId, TransactionStatusEnum.FAILED);
             throw e;
         }
+    }
+
+    public void transfer(Long transferAmount, UUID senderAccountId, UUID receiverAccountId, UUID transactionId) throws Exception{
+        isValidTranscation(transactionId, TransactionTypeEnum.TRANSACTION);
+        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSCATION_STARTED);
+
+        Account senderAccount = accountService.findAccount(senderAccountId);
+
+        if(senderAccount.getBalance() < transferAmount){
+            throw new CustomError("Insufficient Balance", HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            accountService.updateAccountBalance(senderAccountId, transferAmount * -1);
+            accountService.updateAccountBalance(receiverAccountId, transferAmount);
+            updateTransactionStatus(transactionId, TransactionStatusEnum.COMPLETED);
+        }catch (Exception e){
+            updateTransactionComment(transactionId, e.getMessage());
+            updateTransactionStatus(transactionId, TransactionStatusEnum.FAILED);
+            throw e;
+        }
+
     }
 
 
@@ -228,7 +273,8 @@ public class TranscationService {
 
         List<GetAllTransactionDTO> transactionDTOS = new ArrayList<>();
         for (Transaction transaction : transactionsList) {
-            if (transaction.getTransactionStatus().equals(TransactionTypeEnum.TRANSACTION)) {
+            if (transaction.getTransactionType().equals(TransactionTypeEnum.TRANSACTION)) {
+                System.out.println(transaction.getReceiverAccount().getId()+"-------");
                 transactionDTOS.add(new GetAllTransactionDTO(transaction.getId(),
                         transaction.getSenderAccount().getId(),
                         transaction.getReceiverAccount().getId(), transaction.getTransactionType(),

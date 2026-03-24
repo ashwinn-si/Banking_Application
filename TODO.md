@@ -4,8 +4,8 @@
 3. Account creation, get-all, get
 4. Transaction get
 5. With and deposit completed
+6. Transaction get-all
+7. Bank To Bank transaction
 
 # INCOMPLETE TASK
-1. Transcation get-all
-2. Transcation for deposit ```[admin side action only]```
-3. Bank To Bank transaction
+2. Transaction for deposit ```[admin side action only]```
