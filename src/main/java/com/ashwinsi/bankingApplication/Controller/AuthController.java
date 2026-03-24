@@ -55,7 +55,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> loginController(@RequestBody @Valid LoginDTO loginDTO) throws Exception {
         return ResponseHandler.handleResponse(HttpStatus.OK, authService.login(loginDTO.getEmail(), loginDTO.getPhoneNumber(), loginDTO.getPassword()),
-                "Login successfull", true);
+                "Login successful", true);
+    }
+
+    @PostMapping("/login-admin")
+    public ResponseEntity<?> loginAdminController(@RequestBody @Valid LoginDTO loginDTO) throws Exception {
+        return ResponseHandler.handleResponse(HttpStatus.OK, authService.loginAdmin(loginDTO.getEmail(), loginDTO.getPassword()),
+                "Login successful", true);
     }
 
     @PostMapping("/signup")

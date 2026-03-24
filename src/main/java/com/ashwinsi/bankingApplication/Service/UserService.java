@@ -6,6 +6,7 @@ import com.ashwinsi.bankingApplication.Domain.User;
 import com.ashwinsi.bankingApplication.Repository.UserRepository;
 import com.ashwinsi.bankingApplication.Utils.BcryptService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +16,11 @@ import java.util.UUID;
 @Service
 public class UserService {
     private UserRepository userRepository;
+    private PasswordEncoder passwordEncoder;
 
-    UserService(UserRepository userRepository){
+    UserService(UserRepository userRepository, PasswordEncoder passwordEncoder){
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public boolean isUserExists(UUID userId, String email, String phoneNumber) throws Exception{
@@ -46,9 +49,9 @@ public class UserService {
 
     @Transactional
     public UserDTO createUser(String email, String name, String phoneNumber, String password, String address){
+        String hashPassword = passwordEncoder.encode(password);
 
-        System.out.println(email);
-        User user = new User(name, email, password, phoneNumber, address);
+        User user = new User(name, email, hashPassword, phoneNumber, address);
 
         User savedUser = userRepository.save(user);
 

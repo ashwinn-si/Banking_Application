@@ -1,12 +1,16 @@
 package com.ashwinsi.bankingApplication.Domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
+@Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class Admin {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -18,4 +22,8 @@ public class Admin {
     @Column(nullable = false)
     private String password;
 
+    public Admin(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
 }
