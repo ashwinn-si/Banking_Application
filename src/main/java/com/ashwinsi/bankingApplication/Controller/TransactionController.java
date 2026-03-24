@@ -69,14 +69,13 @@ public class TransactionController {
         return ResponseHandler.handleResponse(HttpStatus.OK, null, "Withdraw Sucessfull");
     }
 
-    // TODO ONLY ADMIN CAN DEPOSIT
-    @PostMapping("/start-deposit")
+    @PostMapping("/admin/start-deposit")
     ResponseEntity<?> depositStart(@RequestBody @Validated TransactionStartDTO transactionDTO) throws Exception {
         return ResponseHandler.handleResponse(HttpStatus.OK,
                 transcationService.startTransaction(transactionDTO.getAccountId(), TransactionTypeEnum.DEPOSIT), "Transaction Started");
     }
 
-    @PostMapping("/deposit")
+    @PostMapping("/admin/deposit")
     ResponseEntity<?> deposit(@RequestBody @Validated TransactionDTO depositDTO) throws  Exception{
         transcationService.deposit(depositDTO.getAmount(), depositDTO.getSenderAccountId(), depositDTO.getTransactionId());
         return ResponseHandler.handleResponse(HttpStatus.OK, null, "Amount Successfully Deposited");

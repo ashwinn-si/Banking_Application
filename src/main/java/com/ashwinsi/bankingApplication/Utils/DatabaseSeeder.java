@@ -38,12 +38,14 @@ public class DatabaseSeeder implements CommandLineRunner {
     private void createUser() throws Exception {
         printer("SEEDING USER");
 
-        Boolean isUserExists = userService.isUserExists(null, Constants.DEFAULT_USER_EMAIL, Constants.DEFAULT_USER_PHONENUMBER);
-        if(isUserExists){
+        boolean isUserEmailExists = userService.isUserExists(null, Constants.DEFAULT_USER_EMAIL, null);
+        boolean isUserPhoneExists = userService.isUserExists(null, null, Constants.DEFAULT_USER_PHONENUMBER);
+
+        if(isUserEmailExists || isUserPhoneExists){
             printer("DEFAULT USER ALREADY EXISTS");
         }else{
             userService.createUser(Constants.DEFAULT_USER_EMAIL, Constants.DEFAULT_USER_NAME,
-                    Constants.DEFAULT_USER_PASSWORD, Constants.DEFAULT_USER_PASSWORD, "");
+                    Constants.DEFAULT_USER_PHONENUMBER, Constants.DEFAULT_USER_PASSWORD, "");
             printer("DEFAULT USER CREATED");
         }
     }

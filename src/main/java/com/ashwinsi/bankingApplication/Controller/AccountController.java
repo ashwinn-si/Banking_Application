@@ -4,6 +4,7 @@ import com.ashwinsi.bankingApplication.DTO.JwtDTO;
 import com.ashwinsi.bankingApplication.Service.AccountService;
 import com.ashwinsi.bankingApplication.Utils.ResponseHandler;
 import lombok.Getter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
