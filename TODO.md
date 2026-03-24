@@ -2,11 +2,10 @@
 1. Initial setup 
 2. Login, Signup for user
 3. Account creation, get-all, get
-
+4. Transaction get
+5. With and deposit completed
 
 # INCOMPLETE TASK
-1. Transcation get-all, get
-2. Writing a robust function to handle the version code for the balance 
-3. Indempotency checking function to be written
-4. Transcation for deposit ```[admin side action only]```
-5. Transcation for withdraw, NEFT
+1. Transcation get-all
+2. Transcation for deposit ```[admin side action only]```
+3. Bank To Bank transaction

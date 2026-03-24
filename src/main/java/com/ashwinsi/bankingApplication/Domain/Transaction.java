@@ -19,52 +19,51 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Transaction {
-  @Id
-  @GeneratedValue(strategy = GenerationType.UUID)
-  private UUID id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "sender_account_id")
-  @ToString.Exclude
-  @EqualsAndHashCode.Exclude
-  private Account senderAccount;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "sender_account_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Account senderAccount;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "receiver_account_id")
-  @ToString.Exclude
-  @EqualsAndHashCode.Exclude
-  private Account receiverAccount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_account_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Account receiverAccount;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 30)
-  private TransactionTypeEnum transactionType;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private TransactionTypeEnum transactionType;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 30)
-  private TransactionStatusEnum transactionStatus;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private TransactionStatusEnum transactionStatus;
 
-  @Column(nullable = false)
-  private Long amount;
+    @Column(nullable = false)
+    private Long amount;
 
-  @Column(nullable = false, length = 500)
-  private String comments = "";
+    @Column(nullable = false, length = 500)
+    private String comments = "";
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 20)
-  private TransactionStatusEnum status = TransactionStatusEnum.STARTED;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TransactionStatusEnum status = TransactionStatusEnum.STARTED;
 
-  @Column(nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-  @PrePersist
-  void onCreate() {
-    this.createdAt = LocalDateTime.now();
-  }
+    @PrePersist
+    void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 
-  public void startDeposit(Account senderAccount){
-    this.senderAccount = senderAccount;
-    this.amount = 0L;
-    this.transactionType = TransactionTypeEnum.DEPOSIT;
-    this.transactionStatus = TransactionStatusEnum.STARTED;
-  }
+    public void startTranscation(Account senderAccount) {
+        this.senderAccount = senderAccount;
+        this.amount = 0L;
+        this.transactionStatus = TransactionStatusEnum.STARTED;
+    }
 }

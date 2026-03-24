@@ -81,7 +81,7 @@ public class AccountService {
   }
 
   public boolean isAccountMappedUser(UUID accountId, UUID userId) {
-    return accountRepository.findByIdAndUserId(accountId, userId).isPresent();
+    return accountRepository.findByIdAndUser_Id(accountId, userId).isPresent();
   }
 
   @Transactional
