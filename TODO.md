@@ -6,6 +6,7 @@
 5. With and deposit completed
 6. Transaction get-all
 7. Bank To Bank transaction
+8. Transaction for deposit ```[admin side action only]```
 
 # INCOMPLETE TASK
-2. Transaction for deposit ```[admin side action only]```
+1. in the account the user can set the limit of withdraw / transfer per-day.

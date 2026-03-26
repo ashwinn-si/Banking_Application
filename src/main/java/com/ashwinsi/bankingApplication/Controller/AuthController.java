@@ -46,7 +46,7 @@ class SignUpDTO{
 @Validated
 @RequestMapping("/api/auth")
 public class AuthController {
-    AuthService authService;
+    private final AuthService authService;
 
     AuthController(AuthService authService){
         this.authService = authService;

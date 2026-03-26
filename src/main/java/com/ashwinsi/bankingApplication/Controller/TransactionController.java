@@ -39,7 +39,7 @@ class TransactionDTO{
 @RequestMapping("/api/transaction")
 @Valid
 public class TransactionController {
-    private TranscationService transcationService;
+    private final TranscationService transcationService;
 
     TransactionController(TranscationService transcationService){
         this.transcationService = transcationService;

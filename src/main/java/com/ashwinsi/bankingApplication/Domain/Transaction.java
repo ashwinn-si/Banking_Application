@@ -51,7 +51,7 @@ public class Transaction {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private TransactionStatusEnum status = TransactionStatusEnum.STARTED;
+    private TransactionStatusEnum status = TransactionStatusEnum.INITIATED;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -64,13 +64,13 @@ public class Transaction {
     public void startTranscation(Account senderAccount) {
         this.senderAccount = senderAccount;
         this.amount = 0L;
-        this.transactionStatus = TransactionStatusEnum.STARTED;
+        this.transactionStatus = TransactionStatusEnum.INITIATED;
     }
 
     public void startTranscation(Account senderAccount, Account receiverAccount) {
         this.senderAccount = senderAccount;
         this.receiverAccount = receiverAccount;
         this.amount = 0L;
-        this.transactionStatus = TransactionStatusEnum.STARTED;
+        this.transactionStatus = TransactionStatusEnum.INITIATED;
     }
 }

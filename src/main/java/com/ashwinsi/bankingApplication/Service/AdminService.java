@@ -12,8 +12,8 @@ import java.util.UUID;
 
 @Service
 public class AdminService {
-    private AdminRepository adminRepository;
-    private BcryptService bcryptService;
+    private final AdminRepository adminRepository;
+    private final BcryptService bcryptService;
 
     AdminService(AdminRepository adminRepository, BcryptService bcryptService){
         this.adminRepository = adminRepository;

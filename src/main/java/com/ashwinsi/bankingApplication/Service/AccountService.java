@@ -5,6 +5,8 @@ import com.ashwinsi.bankingApplication.DTO.CustomError;
 import com.ashwinsi.bankingApplication.Domain.Account;
 import com.ashwinsi.bankingApplication.Domain.User;
 import com.ashwinsi.bankingApplication.Repository.AccountRepository;
+import com.ashwinsi.bankingApplication.Utils.Auditable;
+import com.ashwinsi.bankingApplication.Utils.Constants;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +18,8 @@ import java.util.UUID;
 
 @Service
 public class AccountService {
-  private AccountRepository accountRepository;
-  private UserService userService;
+  private final AccountRepository accountRepository;
+  private final UserService userService;
 
   AccountService(AccountRepository accountRepository, UserService userService) {
     this.accountRepository = accountRepository;
@@ -50,13 +52,25 @@ public class AccountService {
     return new AccountDTO(account.getId(), account.getBalance(), account.isBlocked());
   }
 
+  private boolean isAllowedToCreateAccount(User user){
+    if(user.getAccountList().size() > Constants.THRESHOLD_NO_USER_ACCOUNT){
+      return false;
+    }
+    return true;
+  }
+
   @Transactional
+  @Auditable(action = Constants.ACTION_CREATE_ACCOUNT)
   public void createAccount(UUID userId) throws Exception {
     User user = userService.findUser(userId, null, null);
-    List<AccountDTO> allAccounts = getAllAccount(user.getId());
+
+    if(!isAllowedToCreateAccount(user)){
+      throw new CustomError("Maximum no of accounts that can be created reached", HttpStatus.BAD_REQUEST);
+    }
 
     long balance = 0L;
-    if (allAccounts.size() == 0) {
+    int noAccounts = user.getAccountList().size();
+    if (noAccounts== 0) {
       // INITIAL BONUS
       balance = 10000;
     }
@@ -85,6 +99,14 @@ public class AccountService {
   }
 
   @Transactional
+  public void updateAccountBlockStatus(UUID accountId, Boolean status) throws  Exception{
+    Account account = findAccount(accountId);
+    account.setBlocked(status);
+    accountRepository.save(account);
+  }
+
+  @Transactional
+  @Auditable(action =  Constants.ACTION_UPDATE_ACCOUNT_BALANCE)
   public boolean updateAccountBalance(UUID accountId, Long amount) throws Exception {
     if (amount == null) {
       throw new CustomError("AMOUNT IS REQUIRED", HttpStatus.BAD_REQUEST);

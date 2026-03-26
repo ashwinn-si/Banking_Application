@@ -46,7 +46,7 @@ public class SecurityConfig {
     config.setAllowedMethods(List.of("GET", "PUT", "DELETE", "POST"));
 
     // TODO need to add production env later
-    config.setAllowedOrigins(List.of("http://localhost:5173"));
+    config.setAllowedOrigins(List.of("http://localhost:5173", "https://bank-application-front-end.vercel.app"));
 
     config.setMaxAge(3600L);
 

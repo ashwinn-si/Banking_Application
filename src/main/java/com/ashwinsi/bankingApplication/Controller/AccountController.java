@@ -15,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/account")
 public class AccountController {
-    private AccountService accountService;
+    private final AccountService accountService;
 
     AccountController(AccountService accountService){
         this.accountService = accountService;

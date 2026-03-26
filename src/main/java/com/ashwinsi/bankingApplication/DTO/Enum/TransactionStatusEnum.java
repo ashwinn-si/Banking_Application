@@ -1,8 +1,8 @@
 package com.ashwinsi.bankingApplication.DTO.Enum;
 
 public enum TransactionStatusEnum {
-  STARTED,
-  TRANSCATION_STARTED,
+  INITIATED,
+  TRANSACTION_STARTED,
   FAILED,
   COMPLETED
 }
