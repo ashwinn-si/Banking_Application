@@ -162,3 +162,44 @@ Required values:
 On startup, the app seeds default user/admin credentials in development if they do not exist.
 
 Use these only for local testing.
+
+# Banking Application
+
+## Overview
+The Banking Application is a robust and secure platform designed to manage user accounts, transactions, and authentication processes. It leverages modern technologies to ensure scalability, security, and maintainability.
+
+## Features
+
+### 1. Business Logic
+- **Account Management**: Create, retrieve, and manage user accounts.
+- **Transaction Management**: Start, update, and retrieve transactions.
+- **Authentication**: User and admin login, signup, and OTP-based verification.
+
+### 2. Security
+- **Authentication and Authorization**:
+  - JWT-based authentication for secure API access.
+  - Role-based access control with custom filters (`JwtFilter`, `AdminFilter`).
+- **Password Security**:
+  - Passwords are securely hashed using `BCryptPasswordEncoder` with a configurable salt.
+- **CORS Configuration**:
+  - Allows specific origins for frontend integration.
+
+### 3. Transactional Management
+- Ensures atomicity and consistency during database operations using `@Transactional` annotations.
+
+### 4. Technologies Used
+- **Backend**: Spring Boot, Spring Security, Spring Data JPA.
+- **Database**: Relational database (e.g., PostgreSQL, MySQL).
+- **Validation**: Input validation using `@Valid` annotations.
+
+## Future Enhancements
+- Implement caching mechanisms for improved performance.
+- Add production-ready configurations for CORS and security settings.
+
+## How to Use
+- Clone the repository.
+- Configure the database connection in `application.properties`.
+- Build and run the application using Maven.
+
+---
+This README provides a high-level overview of the application and its features. For detailed documentation, refer to the source code and comments.
