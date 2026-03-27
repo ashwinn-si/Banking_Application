@@ -12,4 +12,5 @@
 
 # INCOMPLETE TASK
 1. in the account the user can set the limit of withdraw / transfer per-day.
+2. admin based account reactivation and user reactivation
 3. implementing kafka for email sending and logging actions if possible
