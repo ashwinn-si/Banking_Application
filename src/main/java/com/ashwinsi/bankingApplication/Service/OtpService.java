@@ -6,6 +6,7 @@ import com.ashwinsi.bankingApplication.Domain.Otp;
 import com.ashwinsi.bankingApplication.Repository.OtpRepository;
 import com.ashwinsi.bankingApplication.Utils.Constants;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,14 +19,16 @@ import java.util.UUID;
 @Service
 public class OtpService {
     private final OtpRepository otpRepository;
-
-    // IMP OTP WILL BE CACHED BASED ON THE ACTION ID NO THE ID OF THE OTP
-    // IN THE CACHE ITSELF WE CAN STORE THE ATTEMPTS TOO
     private final Map<UUID, Otp> otpCache = new HashMap<>();
+    private final Map<UUID, LocalDateTime> lastAccessTime = new HashMap<>();
 
     OtpService(OtpRepository otpRepository) {
         this.otpRepository = otpRepository;
 
+    }
+
+    private void markAsAccessed(UUID actionId) {
+        lastAccessTime.put(actionId, LocalDateTime.now());
     }
 
     private Otp getOtpFromCache(UUID actionId) throws Exception {
@@ -34,11 +37,13 @@ public class OtpService {
             Otp otp = findOtpFromRepository(actionId);
             otpCache.put(actionId, otp);
         }
+        markAsAccessed(actionId);
         return otpCache.get(actionId);
     }
 
     private void updateCache(UUID actionId, Otp otp) {
         otpCache.put(actionId, otp);
+        markAsAccessed(actionId);
     }
 
     private void updateOtpStatus(UUID actionId, OtpStatusEnum otpStatusEnum) throws Exception {
@@ -132,9 +137,35 @@ public class OtpService {
     }
 
     private boolean isOtpExists(UUID actionId) {
-        return otpCache.containsKey(actionId) || otpRepository.findByActionId(actionId).isPresent();
+        boolean exists = otpCache.containsKey(actionId)
+                || otpRepository.findByActionId(actionId).isPresent();
+        if (exists) {
+            markAsAccessed(actionId);
+        }
+        return exists;
     }
 
+    public void destroyCache(UUID actionId) {
+        otpCache.remove(actionId);
+        lastAccessTime.remove(actionId);
+    }
 
-    // TODO need to write the destory cache alone
+    // Runs every 10 minutes to clear stale cache entries
+    @Scheduled(fixedRate = 10 * 60 * 1000) // 10 mins in milliseconds
+    public void evictStaleCache() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
+
+        lastAccessTime.entrySet().removeIf(entry -> {
+            LocalDateTime accessedAt = entry.getValue();
+            // If the OTP hasn't been accessed in the last 10 minutes, remove it from both caches
+            if (accessedAt != null && accessedAt.isBefore(cutoff)) {
+                otpCache.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
+
+        System.out
+                .println("[OtpService] Cache eviction ran. Remaining entries: " + otpCache.size());
+    }
 }

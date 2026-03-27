@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,6 +97,8 @@ public class TranscationService {
     private final AccountService accountService;
     private final Map<UUID, Transaction> transactionCache = new HashMap<>();
     private final Map<UUID, UUID> accountIdUserIdCache = new HashMap<>();
+    private final Map<UUID, LocalDateTime> transactionLastAccessTime = new HashMap<>();
+    private final Map<UUID, LocalDateTime> accountIdUserIdLastAccessTime = new HashMap<>();
 
     private final AuditLogService auditLogService;
     private final OtpService otpService;
@@ -165,6 +168,7 @@ public class TranscationService {
             accountIdUserIdCache.put(accountId, account.getUser().getId());
         }
 
+        accountIdUserIdLastAccessTime.put(accountId, LocalDateTime.now());
         return accountIdUserIdCache.get(accountId);
     }
 
@@ -175,21 +179,25 @@ public class TranscationService {
             accountIdUserIdCache.put(accountId, account.getUser().getId());
         }
 
+        accountIdUserIdLastAccessTime.put(accountId, LocalDateTime.now());
         return accountIdUserIdCache.get(accountId);
     }
 
     private Transaction getCachedTransaction(UUID transactionId) throws CustomError {
         if (transactionCache.containsKey(transactionId)) {
+            transactionLastAccessTime.put(transactionId, LocalDateTime.now());
             return transactionCache.get(transactionId);
         }
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new CustomError("Transaction Not Found", HttpStatus.NOT_FOUND));
         transactionCache.put(transactionId, transaction);
+        transactionLastAccessTime.put(transactionId, LocalDateTime.now());
         return transaction;
     }
 
     private void updateTransactionCache(Transaction transaction) {
         transactionCache.put(transaction.getId(), transaction);
+        transactionLastAccessTime.put(transaction.getId(), LocalDateTime.now());
     }
 
     @Transactional
@@ -469,6 +477,32 @@ public class TranscationService {
         return transactionRepository.findById(transactionId).isPresent();
     }
 
+    // Runs every 10 minutes to clean up stale elements in cache
+    @Scheduled(fixedRate = 10 * 60 * 1000)
+    public void evictStaleCache() {
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
 
-    // TODO need to write the destory cache alone
+        transactionLastAccessTime.entrySet().removeIf(entry -> {
+            LocalDateTime accessedAt = entry.getValue();
+            if (accessedAt != null && accessedAt.isBefore(cutoff)) {
+                transactionCache.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
+
+        accountIdUserIdLastAccessTime.entrySet().removeIf(entry -> {
+            LocalDateTime accessedAt = entry.getValue();
+            if (accessedAt != null && accessedAt.isBefore(cutoff)) {
+                accountIdUserIdCache.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
+
+        System.out.println("[TransactionService] Cache eviction ran. Remaining transactions: "
+                + transactionCache.size() + ", Remaining accountIds: "
+                + accountIdUserIdCache.size());
+    }
+
 }
