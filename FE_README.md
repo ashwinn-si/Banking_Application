@@ -55,9 +55,9 @@ JWT claims include:
 
 Important current behavior:
 
-- Security config explicitly permits /api/auth/**.
+- Security config explicitly permits /api/auth/\*\*.
 - Other endpoints are authenticated unless backend security is expanded.
-- Frontend should treat /api/otp/* as part of auth/verification flow.
+- Frontend should treat /api/otp/\* as part of auth/verification flow.
 
 ## 5. Standard Response Wrapper
 
