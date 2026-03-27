@@ -54,20 +54,26 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginController(@RequestBody @Valid LoginDTO loginDTO) throws Exception {
-        return ResponseHandler.handleResponse(HttpStatus.OK, authService.login(loginDTO.getEmail(), loginDTO.getPhoneNumber(), loginDTO.getPassword()),
-                "Login successful", true);
+        return ResponseHandler.handleResponse(HttpStatus.OK,
+                authService.login(loginDTO.getEmail(),
+                        loginDTO.getPhoneNumber(),
+                        loginDTO.getPassword()),
+                "Otp generated for login Kindly Check", true);
     }
 
     @PostMapping("/login-admin")
     public ResponseEntity<?> loginAdminController(@RequestBody @Valid LoginDTO loginDTO) throws Exception {
         return ResponseHandler.handleResponse(HttpStatus.OK, authService.loginAdmin(loginDTO.getEmail(), loginDTO.getPassword()),
-                "Login successful", true);
+                "Login successful Admin", true);
     }
 
     @PostMapping("/signup")
     public ResponseEntity<?> signUpController(@RequestBody @Valid SignUpDTO signUpDTO) throws Exception {
-        authService.signup(signUpDTO.getEmail(), signUpDTO.getPhoneNumber(), signUpDTO.getPassword(), signUpDTO.getName(), signUpDTO.getAddress());
-
-        return ResponseHandler.handleResponse(HttpStatus.OK, null, "Account Created successfully", true);
+        return ResponseHandler.handleResponse(HttpStatus.OK, authService.signup(signUpDTO.getEmail(),
+                signUpDTO.getPhoneNumber(),
+                signUpDTO.getPassword(),
+                signUpDTO.getName(), signUpDTO.getAddress()), "Account Created OTP generated Kindly check email", true);
     }
 }
+
+

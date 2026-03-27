@@ -5,6 +5,7 @@ import com.ashwinsi.bankingApplication.DTO.Enum.TransactionStatusEnum;
 import com.ashwinsi.bankingApplication.DTO.Enum.TransactionTypeEnum;
 import com.ashwinsi.bankingApplication.DTO.GetAllDTO;
 import com.ashwinsi.bankingApplication.Domain.Account;
+import com.ashwinsi.bankingApplication.Domain.Otp;
 import com.ashwinsi.bankingApplication.Domain.Transaction;
 import com.ashwinsi.bankingApplication.Domain.User;
 import com.ashwinsi.bankingApplication.Repository.TransactionRepository;
@@ -85,6 +86,7 @@ class GetAllTransactionDTO {
 @NoArgsConstructor
 class TransactionStartDTO {
     private UUID transcationId;
+    private UUID actionId;
 }
 
 
@@ -96,18 +98,70 @@ public class TranscationService {
     private final Map<UUID, UUID> accountIdUserIdCache = new HashMap<>();
 
     private final AuditLogService auditLogService;
+    private final OtpService otpService;
+    private final EmailServiceWrapper emailService;
 
     TranscationService(TransactionRepository transactionRepository, UserService userService,
-            AccountService accountService, AuditLogService auditLogService) {
+            AccountService accountService, AuditLogService auditLogService, OtpService otpService,
+            EmailServiceWrapper emailService) {
         this.accountService = accountService;
         this.transactionRepository = transactionRepository;
         this.auditLogService = auditLogService;
+        this.otpService = otpService;
+        this.emailService = emailService;
     }
 
-    private UUID getUserIdFromCache(Account account){
+    private UUID createOtpForTransactionAction(Account senderAccount, String action)
+            throws Exception {
+        UUID actionId = UUID.randomUUID();
+        Otp otp = otpService.createOtp(actionId, senderAccount.getUser().getEmail(),
+                senderAccount.getUser().getId(), action);
+        emailService.sendEmail(senderAccount.getUser().getEmail(), senderAccount.getUser().getId(),
+                action, otp.getOtp());
+        return otp.getActionId();
+    }
+
+    private void validateOtpAndBlockAccountOnExceeded(UUID accountId, UUID actionId,
+            Integer enteredOtp, String action) throws Exception {
+        UUID userId = getUserIdFromCache(accountId);
+        Otp otp = otpService.findOtp(actionId);
+
+        if (!action.equals(otp.getAction())) {
+            throw new CustomError("Invalid OTP action", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!userId.equals(otp.getUserId())) {
+            throw new CustomError("Unauthorized OTP for this account", HttpStatus.UNAUTHORIZED);
+        }
+
+        try {
+            boolean isCorrect = otpService.checkOtp(actionId, enteredOtp);
+            if (isCorrect) {
+                return;
+            }
+
+            Otp latestOtp = otpService.findOtp(actionId);
+            if (latestOtp.getIncorrectAttempts() >= latestOtp.getAttemptsAllowed()) {
+                accountService.updateAccountBlockStatus(accountId, true);
+                throw new CustomError("Incorrect OTP attempts exceeded. Account blocked",
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            throw new CustomError("Incorrect OTP", HttpStatus.BAD_REQUEST);
+        } catch (CustomError e) {
+            if ("OTP Attempts Exceeded".equals(e.getMessage())) {
+                accountService.updateAccountBlockStatus(accountId, true);
+                throw new CustomError("OTP attempts exceeded. Account blocked",
+                        HttpStatus.BAD_REQUEST);
+            }
+            throw e;
+        }
+    }
+
+    private UUID getUserIdFromCache(Account account) {
         UUID accountId = account.getId();
 
-        if(!accountIdUserIdCache.containsKey(accountId)){
+        if (!accountIdUserIdCache.containsKey(accountId)) {
             accountIdUserIdCache.put(accountId, account.getUser().getId());
         }
 
@@ -116,7 +170,7 @@ public class TranscationService {
 
     private UUID getUserIdFromCache(UUID accountId) throws Exception {
 
-        if(!accountIdUserIdCache.containsKey(accountId)){
+        if (!accountIdUserIdCache.containsKey(accountId)) {
             Account account = accountService.findAccount(accountId);
             accountIdUserIdCache.put(accountId, account.getUser().getId());
         }
@@ -140,18 +194,20 @@ public class TranscationService {
 
     @Transactional
     @Auditable(action = Constants.ACTION_START_TRANSACTION)
-    public TransactionStartDTO startTransaction(UUID depositAccountId, TransactionTypeEnum transactionTypeEnum)
-            throws Exception {
+    public TransactionStartDTO startTransaction(UUID depositAccountId,
+            TransactionTypeEnum transactionTypeEnum) throws Exception {
         Account senderAccount = accountService.findAccount(depositAccountId);
 
-        if(senderAccount.isBlocked()){
-            throw new CustomError("Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
+        if (senderAccount.isBlocked()) {
+            throw new CustomError("Account is blocked. Cannot start transaction",
+                    HttpStatus.BAD_REQUEST);
         }
 
         UUID userId = getUserIdFromCache(senderAccount);
 
-        if(!auditLogService.isAllowedToPerform(userId, Constants.ACTION_START_TRANSACTION)){
-            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime", HttpStatus.BAD_REQUEST);
+        if (!auditLogService.isAllowedToPerform(userId, Constants.ACTION_START_TRANSACTION)) {
+            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime",
+                    HttpStatus.BAD_REQUEST);
         }
 
         Transaction transaction = new Transaction();
@@ -159,29 +215,36 @@ public class TranscationService {
         transaction.startTranscation(senderAccount);
 
         Transaction savedTranscation = transactionRepository.save(transaction);
+        UUID actionId = null;
+        if (TransactionTypeEnum.WITHDRAW.equals(transactionTypeEnum)) {
+            actionId = createOtpForTransactionAction(senderAccount, Constants.ACTION_WITHDRAW);
+        }
 
-        return new TransactionStartDTO(savedTranscation.getId());
+        return new TransactionStartDTO(savedTranscation.getId(), actionId);
     }
 
     @Transactional
     @Auditable(action = Constants.ACTION_START_TRANSACTION)
-    public TransactionStartDTO startTransaction(UUID senderAccountId, UUID receiverAccountId, TransactionTypeEnum transactionTypeEnum)
-            throws Exception {
+    public TransactionStartDTO startTransaction(UUID senderAccountId, UUID receiverAccountId,
+            TransactionTypeEnum transactionTypeEnum) throws Exception {
         Account senderAccount = accountService.findAccount(senderAccountId);
         Account receiverAccount = accountService.findAccount(receiverAccountId);
 
-        if(senderAccount.isBlocked()){
-            throw new CustomError("Sender Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
+        if (senderAccount.isBlocked()) {
+            throw new CustomError("Sender Account is blocked. Cannot start transaction",
+                    HttpStatus.BAD_REQUEST);
         }
 
-        if(receiverAccount.isBlocked()){
-            throw new CustomError("Receiver Account is blocked. Cannot start transaction", HttpStatus.BAD_REQUEST);
+        if (receiverAccount.isBlocked()) {
+            throw new CustomError("Receiver Account is blocked. Cannot start transaction",
+                    HttpStatus.BAD_REQUEST);
         }
 
         UUID userId = getUserIdFromCache(senderAccount);
 
-        if(!auditLogService.isAllowedToPerform(userId, Constants.ACTION_START_TRANSACTION)){
-            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime", HttpStatus.BAD_REQUEST);
+        if (!auditLogService.isAllowedToPerform(userId, Constants.ACTION_START_TRANSACTION)) {
+            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime",
+                    HttpStatus.BAD_REQUEST);
         }
 
         Transaction transaction = new Transaction();
@@ -189,31 +252,34 @@ public class TranscationService {
         transaction.startTranscation(senderAccount, receiverAccount);
 
         Transaction savedTransaction = transactionRepository.save(transaction);
+        UUID actionId = createOtpForTransactionAction(senderAccount, Constants.ACTION_TRANSFER);
 
-        return new TransactionStartDTO(savedTransaction.getId());
+        return new TransactionStartDTO(savedTransaction.getId(), actionId);
     }
 
     private Transaction isValidTranscation(UUID transcationId, TransactionTypeEnum transactionType)
             throws Exception {
         Transaction transaction = findTransaction(transcationId);
-        try{
-            if(!transaction.getTransactionType().equals(transactionType)){
+        try {
+            if (!transaction.getTransactionType().equals(transactionType)) {
                 transaction.setTransactionStatus(TransactionStatusEnum.FAILED);
                 transaction.setComments("Invalid Transaction Type Attempt");
                 throw new CustomError("Invalid TransactionType", HttpStatus.BAD_REQUEST);
             }
 
-            if(LocalDateTime.now().isAfter(transaction.getCreatedAt().plusMinutes(5))){
+            if (LocalDateTime.now().isAfter(transaction.getCreatedAt().plusMinutes(5))) {
                 transaction.setTransactionStatus(TransactionStatusEnum.FAILED);
                 transaction.setComments("Transaction expired. Time limit of 5 minutes exceeded");
-                throw new CustomError("Transaction expired. Time limit of 5 minutes exceeded", HttpStatus.BAD_REQUEST);
+                throw new CustomError("Transaction expired. Time limit of 5 minutes exceeded",
+                        HttpStatus.BAD_REQUEST);
             }
-            if(transaction.getTransactionStatus() != TransactionStatusEnum.INITIATED){
-                throw new CustomError("Idempotency Rule is stopping the execution", HttpStatus.BAD_REQUEST);
+            if (transaction.getTransactionStatus() != TransactionStatusEnum.INITIATED) {
+                throw new CustomError("Idempotency Rule is stopping the execution",
+                        HttpStatus.BAD_REQUEST);
             }
 
             return transaction;
-        }catch(Exception e){
+        } catch (Exception e) {
             transactionRepository.save(transaction);
             throw e;
         }
@@ -239,7 +305,7 @@ public class TranscationService {
     }
 
     @Transactional
-    public void updateTransactionAmount(UUID transactionId, Long amount) throws Exception{
+    public void updateTransactionAmount(UUID transactionId, Long amount) throws Exception {
         Transaction transaction = getCachedTransaction(transactionId);
         transaction.setAmount(amount);
         transactionRepository.save(transaction);
@@ -247,8 +313,9 @@ public class TranscationService {
     }
 
     @Auditable(action = Constants.ACTION_DEPOSIT)
-    public void deposit(Long depositAmount, UUID depositAccountId, UUID transactionId) throws Exception {
-        Transaction transaction = isValidTranscation(transactionId, TransactionTypeEnum.DEPOSIT);
+    public void deposit(Long depositAmount, UUID depositAccountId, UUID transactionId)
+            throws Exception {
+        isValidTranscation(transactionId, TransactionTypeEnum.DEPOSIT);
         updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSACTION_STARTED);
 
         try {
@@ -263,19 +330,24 @@ public class TranscationService {
     }
 
     @Auditable(action = Constants.ACTION_WITHDRAW)
-    public void withdraw(Long withdrawAmount, UUID withdrawAccountId, UUID transactionId) throws Exception {
+    public void withdraw(Long withdrawAmount, UUID withdrawAccountId, UUID transactionId,
+            UUID actionId, Integer otp) throws Exception {
         isValidTranscation(transactionId, TransactionTypeEnum.WITHDRAW);
 
-        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSACTION_STARTED);
+        validateOtpAndBlockAccountOnExceeded(withdrawAccountId, actionId, otp,
+                Constants.ACTION_WITHDRAW);
 
         UUID userId = getUserIdFromCache(withdrawAccountId);
 
-        if(!auditLogService.isAllowedToPerform(userId, Constants.ACTION_WITHDRAW)){
-            //IMP BLOCKING THE ACCOUNT AS TOO-MUCH ATTEMPTS ARE MADE
+        if (!auditLogService.isAllowedToPerform(userId, Constants.ACTION_WITHDRAW)) {
+            // IMP BLOCKING THE ACCOUNT AS TOO-MUCH ATTEMPTS ARE MADE
             accountService.updateAccountBlockStatus(withdrawAccountId, true);
 
-            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime", HttpStatus.BAD_REQUEST);
+            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime",
+                    HttpStatus.BAD_REQUEST);
         }
+
+        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSACTION_STARTED);
 
         try {
             accountService.updateAccountBalance(withdrawAccountId, withdrawAmount * -1);
@@ -289,31 +361,37 @@ public class TranscationService {
     }
 
     @Auditable(action = Constants.ACTION_TRANSFER)
-    public void transfer(Long transferAmount, UUID senderAccountId, UUID receiverAccountId, UUID transactionId) throws Exception{
+    public void transfer(Long transferAmount, UUID senderAccountId, UUID receiverAccountId,
+            UUID transactionId, UUID actionId, Integer otp) throws Exception {
         isValidTranscation(transactionId, TransactionTypeEnum.TRANSACTION);
-        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSACTION_STARTED);
+
+        validateOtpAndBlockAccountOnExceeded(senderAccountId, actionId, otp,
+                Constants.ACTION_TRANSFER);
 
         Account senderAccount = accountService.findAccount(senderAccountId);
 
-        if(senderAccount.getBalance() < transferAmount){
+        if (senderAccount.getBalance() < transferAmount) {
             throw new CustomError("Insufficient Balance", HttpStatus.BAD_REQUEST);
         }
 
         UUID userId = getUserIdFromCache(senderAccountId);
 
-        if(!auditLogService.isAllowedToPerform(userId, Constants.ACTION_TRANSFER)){
-            //IMP BLOCKING THE ACCOUNT AS TOO-MUCH ATTEMPTS ARE MADE
+        if (!auditLogService.isAllowedToPerform(userId, Constants.ACTION_TRANSFER)) {
+            // IMP BLOCKING THE ACCOUNT AS TOO-MUCH ATTEMPTS ARE MADE
             accountService.updateAccountBlockStatus(senderAccountId, true);
 
-            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime", HttpStatus.BAD_REQUEST);
+            throw new CustomError("Limit to start transaction has Exceed. Try After Sometime",
+                    HttpStatus.BAD_REQUEST);
         }
+
+        updateTransactionStatus(transactionId, TransactionStatusEnum.TRANSACTION_STARTED);
 
         try {
             accountService.updateAccountBalance(senderAccountId, transferAmount * -1);
             accountService.updateAccountBalance(receiverAccountId, transferAmount);
             updateTransactionAmount(transactionId, transferAmount);
             updateTransactionStatus(transactionId, TransactionStatusEnum.COMPLETED);
-        }catch (Exception e){
+        } catch (Exception e) {
             updateTransactionComment(transactionId, e.getMessage());
             updateTransactionStatus(transactionId, TransactionStatusEnum.FAILED);
             throw e;
@@ -347,8 +425,8 @@ public class TranscationService {
         return getTranscationDTO;
     }
 
-    public GetAllDTO getAllTranscation(UUID accountId, UUID userId, Integer page, Integer size)
-            throws Exception {
+    public GetAllDTO<List<GetAllTransactionDTO>> getAllTranscation(UUID accountId, UUID userId,
+            Integer page, Integer size) throws Exception {
 
         boolean isAccountMappedToUser = accountService.isAccountMappedUser(accountId, userId);
         if (!isAccountMappedToUser) {
@@ -364,7 +442,7 @@ public class TranscationService {
         List<GetAllTransactionDTO> transactionDTOS = new ArrayList<>();
         for (Transaction transaction : transactionsList) {
             if (transaction.getTransactionType().equals(TransactionTypeEnum.TRANSACTION)) {
-                System.out.println(transaction.getReceiverAccount().getId()+"-------");
+                System.out.println(transaction.getReceiverAccount().getId() + "-------");
                 transactionDTOS.add(new GetAllTransactionDTO(transaction.getId(),
                         transaction.getSenderAccount().getId(),
                         transaction.getReceiverAccount().getId(), transaction.getTransactionType(),
@@ -379,7 +457,7 @@ public class TranscationService {
 
         }
 
-        return new GetAllDTO(transactionDTOS, page, size, transactionsPage.getTotalPages());
+        return new GetAllDTO<>(transactionDTOS, page, size, transactionsPage.getTotalPages());
     }
 
     private Transaction findTransaction(UUID transactionId) throws CustomError {
@@ -390,4 +468,7 @@ public class TranscationService {
     private boolean isTransactionExists(UUID transactionId) {
         return transactionRepository.findById(transactionId).isPresent();
     }
+
+
+    // TODO need to write the destory cache alone
 }

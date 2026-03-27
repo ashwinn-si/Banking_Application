@@ -39,17 +39,25 @@ public class Account {
   @EqualsAndHashCode.Exclude
   private User user;
 
-  @Column(nullable = false, updatable = false)
-  private LocalDateTime createdAt;
-
   @OneToMany(mappedBy = "senderAccount", fetch = FetchType.LAZY)
   private List<Transaction> sentTransactions = new ArrayList<>();
 
   @OneToMany(mappedBy = "receiverAccount", fetch = FetchType.LAZY)
   private List<Transaction> receivedTransactions = new ArrayList<>();
 
+  @Column(nullable = false, updatable = false)
+  private LocalDateTime createdAt;
+
+  private LocalDateTime updatedAt;
+
   @PrePersist
   void onCreate() {
     this.createdAt = LocalDateTime.now();
+    this.updatedAt = LocalDateTime.now();
+  }
+
+  @PreUpdate
+  void onUpdate(){
+    this.updatedAt = LocalDateTime.now();
   }
 }

@@ -13,4 +13,5 @@ public class EnvConfig {
     private Integer salt;
     private Long jwtExpirationTime;
     private String jwtSecret;
+    private String mailerSenderEmail;
 }

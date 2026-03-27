@@ -44,7 +44,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         if(isUserEmailExists || isUserPhoneExists){
             printer("DEFAULT USER ALREADY EXISTS");
         }else{
-            userService.createUser(Constants.DEFAULT_USER_EMAIL, Constants.DEFAULT_USER_NAME,
+            userService.createDefaultUser(Constants.DEFAULT_USER_EMAIL, Constants.DEFAULT_USER_NAME,
                     Constants.DEFAULT_USER_PHONENUMBER, Constants.DEFAULT_USER_PASSWORD, "");
             printer("DEFAULT USER CREATED");
         }

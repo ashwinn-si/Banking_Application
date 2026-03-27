@@ -7,6 +7,9 @@
 6. Transaction get-all
 7. Bank To Bank transaction
 8. Transaction for deposit ```[admin side action only]```
+9. otp for the all the transcation made
+
 
 # INCOMPLETE TASK
 1. in the account the user can set the limit of withdraw / transfer per-day.
+3. implementing kafka for email sending and logging actions if possible

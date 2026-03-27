@@ -1,45 +1,39 @@
 # Banking Application Backend Guide (for Frontend Development)
 
-This project is the backend API for a banking application built with Spring Boot.
+This document is the current frontend contract for the Spring Boot backend.
 
-Use this document as the source of truth for frontend page planning, API integration, and request/response contracts.
+## 1. Scope
 
-## 1. What this backend does
+Backend features:
 
-The backend supports:
-
-- User signup and login
+- User signup and login (OTP-based)
 - Admin login
-- Account creation and account listing
-- Account-level transaction history (paginated)
-- Transaction execution flows:
-  - Withdraw
-  - Transfer
-  - Deposit (admin-only)
+- Account creation and listing
+- Transaction history
+- Transaction flows:
+- Withdraw (OTP-protected)
+- Transfer (OTP-protected)
+- Deposit (admin-only)
+- OTP resend support
 
-Main architecture:
-
-- Controllers: REST API endpoints
-- Services: business logic
-- Repositories: database access (JPA)
-- Filters: JWT auth + admin authorization
-
-## 2. Tech stack
+## 2. Tech Stack
 
 - Java + Spring Boot
-- Spring Security (JWT-based auth)
+- Spring Security (JWT)
 - Spring Data JPA + MySQL
 - Lombok
 
-## 3. Base URL and environment
+## 3. Base URL and Environment
 
-- Local backend base URL (default): http://localhost:8080
-- CORS currently allows frontend origin: http://localhost:5173
-- Config comes from:
-  - src/main/resources/application.properties
-  - .env (imported by Spring)
+- Local base URL: http://localhost:8080
+- Allowed origins include:
+- http://localhost:5173
+- https://bank-application-front-end.vercel.app
+- Config sources:
+- src/main/resources/application.properties
+- .env
 
-Required env variables:
+Required env vars:
 
 - DB_URL
 - DB_USERNAME
@@ -48,524 +42,373 @@ Required env variables:
 - SALT
 - JWT_EXPIRATION_TIME
 
-## 4. Authentication model
+## 4. Authentication and Security Notes
 
-All endpoints except /api/auth/\*\* require JWT token.
-
-Header format:
+JWT header format:
 
 - Authorization: Bearer <token>
 
-JWT includes:
+JWT claims include:
 
-- userId (UUID)
+- userId
 - role (USER or ADMIN)
 
-Admin-only authorization is applied to any path containing /admin.
+Important current behavior:
 
-## 5. Standard response format
+- Security config explicitly permits /api/auth/**.
+- Other endpoints are authenticated unless backend security is expanded.
+- Frontend should treat /api/otp/* as part of auth/verification flow.
 
-### Success and failure wrapper
+## 5. Standard Response Wrapper
 
-All API responses follow this structure:
+All responses use:
 
+```json
 {
-"data": <any or null>,
-"message": "string",
-"success": true | false
+  "data": {},
+  "message": "string",
+  "success": true
 }
+```
 
-### Common error behavior
+Error wrapper uses same shape with success=false and data=null.
 
-- Validation errors -> 400
-- Type mismatch in params/query -> 400
-- Business errors (CustomError) -> defined status (e.g. 401, 404, 409)
-- Unexpected errors -> 500
+## 6. Critical Frontend Rule
 
-Error body also follows same wrapper with:
+- Never show actionId in UI, logs visible to users, links, or query params.
+- actionId is an internal transient token for OTP verification only.
 
-- data: null
-- success: false
+## 7. Auth APIs
 
-## 6. Suggested frontend pages
+## 7.1 POST /api/auth/signup
 
-These are the natural pages/screens to build from this backend API.
+Creates user and returns actionId for OTP verification.
 
-### Public pages
+Request:
 
-1. User Login
-2. User Signup
-3. Admin Login
-
-### Authenticated user pages
-
-4. User Dashboard (summary + quick actions)
-5. Accounts List
-6. Account Details
-7. Transaction History (paginated)
-8. Start Withdraw + Confirm Withdraw
-9. Start Transfer + Confirm Transfer
-10. Transaction Details
-
-### Authenticated admin pages
-
-11. Admin Dashboard
-12. Start Deposit + Confirm Deposit
-13. Transaction Lookup (optional admin utility)
-
-### Shared UX pages/components
-
-14. Unauthorized / Session Expired page
-15. Global Error / Not Found page
-16. Reusable confirmation modal for transaction second-step APIs
-
-## 7. API endpoints
-
-## 7.1 Auth APIs
-
-### POST /api/auth/signup
-
-Create a new user.
-
-Request body:
+```json
 {
-"email": "user@example.com",
-"password": "123456",
-"phoneNumber": "9444133344",
-"name": "Ash",
-"address": "Chennai"
+  "email": "user@example.com",
+  "password": "123456",
+  "phoneNumber": "9444133344",
+  "name": "Ash",
+  "address": "Chennai"
 }
+```
 
-Success response (200):
+Success:
+
+```json
 {
-"data": null,
-"message": "Account Created successfully",
-"success": true
+  "data": {
+    "actionId": "uuid"
+  },
+  "message": "Account Created OTP generated Kindly check email",
+  "success": true
 }
+```
 
-Possible errors:
+## 7.2 POST /api/auth/login
 
-- 409 if email or phone already exists
+Starts login and returns actionId for OTP verification.
 
----
+Validation notes:
 
-### POST /api/auth/login
+- email format validation exists
+- password length validation: 1..8
+- phoneNumber optional, length 10 if provided
 
-Login as a normal user.
+Request:
 
-Notes:
-
-- email is validated as email format
-- password length validation is 1..8
-- phoneNumber is optional but if provided, must be 10 chars
-- service primarily resolves by email when email is provided
-
-Request body:
+```json
 {
-"email": "user@example.com",
-"password": "123456",
-"phoneNumber": "9444133344"
+  "email": "user@example.com",
+  "password": "123456",
+  "phoneNumber": "9444133344"
 }
+```
 
-Success response (200):
+Success:
+
+```json
 {
-"data": {
-"token": "<jwt-token>"
-},
-"message": "Login successful",
-"success": true
+  "data": {
+    "actionId": "uuid"
+  },
+  "message": "Otp generated for login Kindly Check",
+  "success": true
 }
+```
 
-Possible errors:
+## 7.3 POST /api/otp/login
 
-- 404 user not found
-- 409 incorrect password
-- 400 validation failure
+Verifies login OTP and returns JWT.
 
----
+Request:
 
-### POST /api/auth/login-admin
-
-Login as admin.
-
-Request body:
+```json
 {
-"email": "admin@example.com",
-"password": "root"
+  "actionId": "uuid",
+  "otp": 123456
 }
+```
 
-Success response (200):
+Success:
+
+```json
 {
-"data": {
-"token": "<jwt-token>"
-},
-"message": "Login successful",
-"success": true
+  "data": {
+    "token": "<jwt-token>"
+  },
+  "message": "Login Successful",
+  "success": true
 }
+```
 
-Possible errors:
+## 7.4 POST /api/otp/signup
 
-- 404 admin not found
-- 409 incorrect password
+Verifies signup OTP and activates account.
 
-## 7.2 Account APIs (JWT required)
+Request:
 
-### GET /api/account/get-all
-
-Get all accounts mapped to logged-in user.
-
-Headers:
-
-- Authorization: Bearer <jwt-token>
-
-Success response (200):
+```json
 {
-"data": [
+  "actionId": "uuid",
+  "otp": 123456
+}
+```
+
+Success:
+
+```json
 {
-"accountId": "uuid",
-"balance": 10000,
-"blocked": false
+  "data": null,
+  "message": "Signup Successfull",
+  "success": true
 }
-],
-"message": "All account details",
-"success": true
-}
+```
 
-Possible errors:
+## 7.5 POST /api/otp/resend
 
-- 404 user not found
-- 401 unauthorized
+Resends OTP by actionId. Same endpoint for auth OTP and transaction OTP.
 
----
+Request:
 
-### GET /api/account/get/{accountId}
-
-Get one account (only if mapped to logged-in user).
-
-Path params:
-
-- accountId (UUID)
-
-Success response (200):
+```json
 {
-"data": {
-"accountId": "uuid",
-"balance": 10000,
-"blocked": false
-},
-"message": "Account details",
-"success": true
+  "actionId": "uuid"
 }
+```
 
-Possible errors:
+Success:
 
-- 404 account not found
-- 401 if account not mapped to this user
-
----
-
-### POST /api/account/add
-
-Create a new account for logged-in user.
-
-Headers:
-
-- Authorization: Bearer <jwt-token>
-
-Request body:
-
-- none
-
-Success response (200):
+```json
 {
-"data": null,
-"message": "Account Created",
-"success": true
+  "data": null,
+  "message": "OTP sent successfully",
+  "success": true
 }
+```
 
-Business note:
+## 7.6 POST /api/auth/login-admin
 
-- First account may receive initial bonus balance of 10000
+Admin login remains token-based.
 
-## 7.3 Transaction APIs (JWT required)
+Request:
 
-Transaction flow is two-step:
-
-1. Start transaction -> get transaction id
-2. Confirm transaction with amount + transaction id
-
-Time/idempotency behavior:
-
-- Transaction must be completed within 5 minutes
-- Reusing non-STARTED transaction id is rejected
-
-Transaction status enum values:
-
-- STARTED
-- TRANSCATION_STARTED
-- FAILED
-- COMPLETED
-
-Transaction type enum values:
-
-- DEPOSIT
-- WITHDRAW
-- TRANSACTION
-
-### GET /api/transaction/get/{transactionId}
-
-Get transaction details.
-
-Path params:
-
-- transactionId (UUID)
-
-Success response (200):
+```json
 {
-"data": {
-"transactionId": "uuid",
-"sender": {
-"id": "uuid",
-"accountId": "uuid",
-"name": "Ash",
-"phoneNumber": "9444133344",
-"email": "user@example.com"
-},
-"receiver": {
-"id": "uuid",
-"accountId": "uuid",
-"name": "Bob",
-"phoneNumber": "9999999999",
-"email": "bob@example.com"
-},
-"amount": 500,
-"comments": "",
-"transactionType": "TRANSACTION",
-"transactionStatus": "COMPLETED",
-"createdAt": "2026-03-24T10:15:30"
-},
-"message": "Transaction Details",
-"success": true
+  "email": "admin@example.com",
+  "password": "root"
 }
+```
 
-Notes:
+Success:
 
-- receiver is null for WITHDRAW and DEPOSIT transactions
-
----
-
-### GET /api/transaction/get-all/{accountId}?page=1&size=10
-
-Get paginated transactions for an account.
-
-Path params:
-
-- accountId (UUID)
-
-Query params:
-
-- page (1-based)
-- size
-
-Success response (200):
+```json
 {
-"data": {
-"data": [
+  "data": {
+    "token": "<jwt-token>"
+  },
+  "message": "Login successful Admin",
+  "success": true
+}
+```
+
+## 8. Account APIs
+
+## 8.1 GET /api/account/get-all
+
+Returns all accounts mapped to logged-in user.
+
+## 8.2 GET /api/account/get/{accountId}
+
+Returns one account if mapped to user.
+
+## 8.3 POST /api/account/add
+
+Creates account for logged-in user.
+
+All account endpoints use JWT auth.
+
+## 9. Transaction APIs
+
+Transaction flow is now OTP-aware for withdraw and transfer.
+
+## 9.1 GET /api/transaction/get/{transactionId}
+
+Returns transaction details.
+
+## 9.2 GET /api/transaction/get-all/{accountId}?page=1&size=10
+
+Returns paginated transaction list in:
+
+- data.data
+- data.currPage
+- data.size
+- data.totalPages
+
+## 9.3 POST /api/transaction/start-withdraw
+
+Starts withdraw and returns both transaction id and actionId.
+
+Request:
+
+```json
 {
-"transactionId": "uuid",
-"senderAccountId": "uuid",
-"receiverAccountId": "uuid or null",
-"transactionType": "WITHDRAW",
-"transactionStatus": "COMPLETED",
-"amount": 200,
-"createdAt": "2026-03-24T10:15:30"
+  "accountId": "uuid",
+  "receiverAccountId": null
 }
-],
-"currPage": 1,
-"size": 10,
-"totalPages": 4
-},
-"message": "Transaction Details",
-"success": true
-}
+```
 
-Possible errors:
+Success data:
 
-- 401 if account does not belong to user
-
----
-
-### POST /api/transaction/start-withdraw
-
-Start a withdraw transaction.
-
-Request body:
+```json
 {
-"accountId": "uuid",
-"receiverAccountId": null
+  "transcationId": "uuid",
+  "actionId": "uuid"
 }
+```
 
-Success response (200):
+## 9.4 POST /api/transaction/withdraw
+
+Confirm withdraw with OTP.
+
+Request:
+
+```json
 {
-"data": {
-"transcationId": "uuid"
-},
-"message": "Transaction Started",
-"success": true
+  "senderAccountId": "uuid",
+  "amount": 500,
+  "transactionId": "uuid",
+  "receiverAccountId": null,
+  "actionId": "uuid",
+  "otp": 123456
 }
+```
 
-Important:
+## 9.5 POST /api/transaction/start-transfer
 
-- Response key is transcationId (typo in backend DTO). Frontend should use this exact key.
+Starts transfer and returns both transaction id and actionId.
 
----
+Request:
 
-### POST /api/transaction/withdraw
-
-Confirm withdraw.
-
-Request body:
+```json
 {
-"senderAccountId": "uuid",
-"amount": 500,
-"transactionId": "uuid",
-"receiverAccountId": null
+  "accountId": "uuid",
+  "receiverAccountId": "uuid"
 }
+```
 
-Success response (200):
+Success data:
+
+```json
 {
-"data": null,
-"message": "Withdraw Sucessfull",
-"success": true
+  "transcationId": "uuid",
+  "actionId": "uuid"
 }
+```
 
-Possible errors:
+## 9.6 POST /api/transaction/transfer
 
-- 400 insufficient balance
-- 400 expired transaction / invalid idempotency state
+Confirm transfer with OTP.
 
----
+Request:
 
-### POST /api/transaction/start-transfer
-
-Start a transfer transaction.
-
-Request body:
+```json
 {
-"accountId": "uuid",
-"receiverAccountId": "uuid"
+  "senderAccountId": "uuid",
+  "receiverAccountId": "uuid",
+  "amount": 500,
+  "transactionId": "uuid",
+  "actionId": "uuid",
+  "otp": 123456
 }
+```
 
-Success response (200):
+## 9.7 POST /api/transaction/admin/start-deposit
+
+Starts admin deposit.
+
+Request:
+
+```json
 {
-"data": {
-"transcationId": "uuid"
-},
-"message": "Transaction Started",
-"success": true
+  "accountId": "uuid",
+  "receiverAccountId": null
 }
+```
 
----
+Success data includes `transcationId`. `actionId` may be null for deposit starts.
 
-### POST /api/transaction/transfer
+## 9.8 POST /api/transaction/admin/deposit
 
-Confirm transfer.
+Confirms admin deposit.
 
-Request body:
+Request:
+
+```json
 {
-"senderAccountId": "uuid",
-"receiverAccountId": "uuid",
-"amount": 500,
-"transactionId": "uuid"
+  "senderAccountId": "uuid",
+  "amount": 1000,
+  "transactionId": "uuid",
+  "receiverAccountId": null
 }
+```
 
-Success response (200):
-{
-"data": null,
-"message": "Transfer Successful",
-"success": true
-}
+## 10. Frontend UX Checklist
 
-Possible errors:
+1. User login is now 2-step: login -> OTP verify.
+2. User signup is now 2-step: signup -> OTP verify.
+3. Add resend OTP in auth OTP screens.
+4. Withdraw is 2-step with OTP at confirm.
+5. Transfer is 2-step with OTP at confirm.
+6. Add resend OTP in withdraw/transfer OTP step.
+7. Keep actionId internal only.
+8. Store JWT after OTP login success.
+9. Keep admin flow unchanged.
 
-- 400 insufficient balance
-- 400 expired transaction / invalid idempotency state
+## 11. Important Error Messages to Handle
 
----
+- Incorrect OTP
+- OTP Attempts Exceeded
+- OTP attempts exceeded. Account blocked
+- OTP Expired
+- Invalid OTP action
+- Unauthorized OTP for this account
+- OTP already verified. Resend is not allowed
 
-### POST /api/transaction/admin/start-deposit (admin JWT required)
+## 12. Known Contract Quirks
 
-Start a deposit transaction.
+1. Response key typo remains: `transcationId`.
+2. Class naming typo remains in codebase: `TranscationService`.
+3. Continue consuming backend fields exactly as returned.
 
-Request body:
-{
-"accountId": "uuid",
-"receiverAccountId": null
-}
+## 13. Dev Seed Users
 
-Success response (200):
-{
-"data": {
-"transcationId": "uuid"
-},
-"message": "Transaction Started",
-"success": true
-}
+Default development users may be auto-seeded:
 
----
+- user: admin@gmail.com / root
+- admin: admin@gmail.com / root
 
-### POST /api/transaction/admin/deposit (admin JWT required)
-
-Confirm deposit.
-
-Request body:
-{
-"senderAccountId": "uuid",
-"amount": 1000,
-"transactionId": "uuid",
-"receiverAccountId": null
-}
-
-Success response (200):
-{
-"data": null,
-"message": "Amount Successfully Deposited",
-"success": true
-}
-
-## 8. Frontend integration checklist
-
-1. Build two auth flows:
-   - User login/signup
-   - Admin login
-2. Store JWT and send Authorization header for protected APIs.
-3. Implement route protection for user/admin paths.
-4. Implement two-step transaction UX:
-   - Start endpoint
-   - Confirm endpoint with returned transcationId
-5. Handle API wrapper consistently (data, message, success).
-6. Build reusable error handling for 400/401/404/409/500.
-7. For get-all transactions, handle nested pagination object:
-   - response.data.data -> transaction list
-   - response.data.currPage, size, totalPages -> pagination meta
-
-## 9. Seeded default users (development)
-
-A startup seeder creates defaults if absent:
-
-- Default user email: admin@gmail.com
-- Default user password: root
-- Default admin email: admin@gmail.com
-- Default admin password: root
-
-Use this only for local/dev testing.
-
-## 10. Notes and caveats for frontend team
-
-- Some DTO/property names contain typos from backend and should be consumed as-is:
-  - transcationId (not transactionId) in start transaction response
-  - TRANSCATION_STARTED enum value spelling
-- Password max length validation in login is currently 8.
-- CORS is currently local-only (http://localhost:5173).
-
-If backend contract changes later, this README should be updated first so frontend remains aligned.
+For local testing only.

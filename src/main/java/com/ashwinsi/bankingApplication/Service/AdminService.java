@@ -42,10 +42,6 @@ public class AdminService {
         return admin;
     }
 
-
-
-
-
     public boolean isAdminExists(UUID adminId){
         return adminRepository.findById(adminId).isPresent();
     }

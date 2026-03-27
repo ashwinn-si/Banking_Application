@@ -4,7 +4,6 @@ import com.ashwinsi.bankingApplication.DTO.CustomError;
 import com.ashwinsi.bankingApplication.DTO.UserDTO;
 import com.ashwinsi.bankingApplication.Domain.User;
 import com.ashwinsi.bankingApplication.Repository.UserRepository;
-import com.ashwinsi.bankingApplication.Utils.BcryptService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,31 +17,39 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    UserService(UserRepository userRepository, PasswordEncoder passwordEncoder){
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder){
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
-    public boolean isUserExists(UUID userId, String email, String phoneNumber) throws Exception{
+    @Transactional
+    public void updateUserActiveStatus(UUID userId, boolean flag) throws  Exception{
+        User user = findUser(userId, null, null);
+        user.setActivated(flag);
+    }
+
+    public boolean isUserExists(UUID userId, String email, String phoneNumber) {
         Optional<User> user;
         if(userId != null) {
             user = userRepository.findById(userId);
         }else if(email != null){
-            user = userRepository.findByEmail(email);
+            user = userRepository.findByEmailAndIsActivated(email, true);
         }else{
-            user = userRepository.findByPhoneNumber(phoneNumber);
+            user = userRepository.findByPhoneNumberAndIsActivated(phoneNumber, true);
         }
        return user.isPresent();
     }
+
+
 
     protected User findUser(UUID userId, String email, String phoneNumber) throws  Exception{
         User user;
         if(userId != null) {
             user = userRepository.findById(userId).orElseThrow(() -> new CustomError("User Not Found", HttpStatus.NOT_FOUND));
         }else if(email != null){
-            user = userRepository.findByEmail(email).orElseThrow(() -> new CustomError("User Not Found", HttpStatus.NOT_FOUND));
+            user = userRepository.findByEmailAndIsActivated(email, true).orElseThrow(() -> new CustomError("User Not Found", HttpStatus.NOT_FOUND));
         }else{
-            user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow(() -> new CustomError("User Not Found", HttpStatus.NOT_FOUND));
+            user = userRepository.findByEmailAndIsActivated(phoneNumber, true).orElseThrow(() -> new CustomError("User Not Found", HttpStatus.NOT_FOUND));
         }
         return user;
     }
@@ -52,6 +59,19 @@ public class UserService {
         String hashPassword = passwordEncoder.encode(password);
 
         User user = new User(name, email, hashPassword, phoneNumber, address);
+
+        User savedUser = userRepository.save(user);
+
+        return new UserDTO(savedUser.getId(), savedUser.getEmail(), savedUser.getPhoneNumber(), savedUser.getPassword(), savedUser.isActivated());
+    }
+
+    @Transactional
+    public UserDTO createDefaultUser(String email, String name, String phoneNumber, String password, String address){
+        String hashPassword = passwordEncoder.encode(password);
+
+        User user = new User(name, email, hashPassword, phoneNumber, address);
+
+        user.setActivated(true);
 
         User savedUser = userRepository.save(user);
 

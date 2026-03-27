@@ -44,6 +44,13 @@ public class AuditLogService {
         attemptsCache.put(key, attemptsCache.get(key) + 1);
     }
 
+    public void updateCache(UUID userId, String action){
+        String key = keyBuilder(userId, action);
+        attemptTime.put(key, LocalDateTime.now());
+        attemptsCache.put(key, attemptsCache.get(key) + 1);
+    }
+
+
     public boolean isAllowedToPerform(UUID userId, String action){
         String cacheKey = keyBuilder(userId, action);
 
@@ -66,7 +73,7 @@ public class AuditLogService {
     }
 
     // Runs every 10 minutes to clear stale cache entries
-    @Scheduled(fixedRate = 10 * 60 * 1000) // 30 mins in milliseconds
+    @Scheduled(fixedRate = 10 * 60 * 1000) // 10 mins in milliseconds
     public void evictStaleCache() {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(10);
 
