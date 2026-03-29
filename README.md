@@ -183,18 +183,38 @@ The Banking Application is a robust and secure platform designed to manage user 
   - Passwords are securely hashed using `BCryptPasswordEncoder` with a configurable salt.
 - **CORS Configuration**:
   - Allows specific origins for frontend integration.
+- **Rate Limiting**:
+  - Implemented a Redis-based rate-limiting mechanism (`AuditLogService`) to prevent abuse of actions like login, signup, and transactions.
+  - Action thresholds and expiration times are configurable in `Constants.java`.
 
-### 3. Transactional Management
+### 3. Caching Strategy
+- **In-Memory Caching**:
+  - The application uses an in-memory cache for frequently accessed, non-critical data to reduce database load.
+- **Redis Caching**:
+  - Redis is used for distributed caching, particularly for rate limiting and managing user action counts.
+
+### 4. Asynchronous Operations with Kafka
+- **Email Service**:
+  - User-facing operations like sending OTPs and email confirmations are handled asynchronously using Kafka.
+  - An `EmailProducer` sends email-related events to a Kafka topic (`email-events`).
+  - A dedicated `EmailConsumer` processes these events to send emails without blocking the main application thread.
+
+### 5. Transactional Management
 - Ensures atomicity and consistency during database operations using `@Transactional` annotations.
 
-### 4. Technologies Used
+### 6.  Concurrency Control
+
+* Implemented **optimistic locking** using a version field (`@Version`) in the Account entity to ensure safe concurrent updates.
+* Prevents race conditions and double-spending scenarios during high-frequency transactions by validating version consistency before committing updates.
+
+### 7. Technologies Used
 - **Backend**: Spring Boot, Spring Security, Spring Data JPA.
 - **Database**: Relational database (e.g., PostgreSQL, MySQL).
+- **Caching**: Redis.
+- **Messaging**: Kafka.
 - **Validation**: Input validation using `@Valid` annotations.
 
-## Future Enhancements
-- Implement caching mechanisms for improved performance.
-- Add production-ready configurations for CORS and security settings.
+
 
 ## How to Use
 - Clone the repository.
