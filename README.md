@@ -1,139 +1,32 @@
 # Banking Application Backend
 
-This repository contains the backend service for a Banking Application built with Spring Boot.
+Spring Boot backend for a banking platform with authentication, account management, and transaction workflows.
 
-It provides authentication, account management, and transaction workflows that power the mobile/web frontend.
+This service is designed for regular users and admins, with secure JWT-based APIs, role checks, and transactional safety.
 
-## Application Overview
-
-The backend is designed around three core domains:
+## Features
 
 - Authentication and authorization
-- User bank accounts
-- Financial transactions
-
-The system supports both regular users and admins.
-
-## Core Features
-
-### 1. Authentication
-
-- User signup with email, phone number, and profile details
-- User login (JWT-based)
-- Admin login (JWT-based)
-- Protected routes for authenticated users
-- Extra admin protection for admin APIs
-
-### 2. Account Management
-
-- Create account for logged-in user
-- List all accounts mapped to logged-in user
-- Fetch single account details
-- Account ownership validation
-- Initial bonus balance for first account (10000)
-
-### 3. Transaction Management
-
-- Start + confirm transaction pattern (two-step flow)
-- Withdraw money from account
-- Transfer money between accounts
-- Deposit money (admin-only)
-- Fetch transaction details
-- Fetch paginated transaction history for an account
-
-### 4. Business Rules and Safety
-
-- JWT token validation for secured endpoints
-- Idempotency-style transaction state checks
-- Transaction expiry window (5 minutes)
-- Insufficient balance checks
-- Blocked-account checks
-- Role-based access checks for admin routes
-
-### 5. Error Handling and API Contract
-
-- Consistent response wrapper:
-  - data
-  - message
-  - success
-- Global exception handling for validation and business errors
-- Standard HTTP status codes for client handling
-
-
-#### Transaction Service 
-The `TranscationService` class improve performance and maintainability. Below are the key changes:
-
-1. **Caching Mechanism**:
-   - Introduced a caching mechanism to store and reuse transaction data, reducing redundant database queries.
-   - Added methods `getCachedTransaction` and `updateTransactionCache` to manage the cache.
-
-2. **Transaction Updates**:
-   - Refactored methods to update transaction status, comments, and amounts (`updateTransactionStatus`, `updateTransactionComment`, `updateTransactionAmount`).
-   - These methods now utilize the caching mechanism for efficiency.
-
-3. **Deposit, Withdraw, and Transfer Operations**:
-   - Enhanced the `deposit`, `withdraw`, and `transfer` methods to handle transactions more robustly.
-   - Added validation for transaction types and account statuses.
-
-4. **Error Handling**:
-   - Improved error handling to ensure consistency in transaction states.
-   - Added custom error messages for better debugging.
-
-5. **Code Organization**:
-   - Organized methods logically for better readability and maintainability.
-
-## User Roles
-
-### User
-
-- Signup and login
-- Create and view own accounts
-- Start and complete withdraw/transfer
-- View account transaction history
-
-### Admin
-
-- Admin login
-- Start and complete deposit transactions
-
-## Suggested Frontend Screens
-
-### Public
-
-- Login
-- Signup
-- Admin Login
-
-### User
-
-- Dashboard
-- Accounts List
-- Account Detail
-- Transaction History (paginated)
-- Withdraw (start + confirm)
-- Transfer (start + confirm)
-- Transaction Detail
-
-### Admin
-
-- Admin Dashboard
-- Deposit (start + confirm)
-
-### Shared
-
-- Unauthorized / Session Expired
-- Error / Not Found
-
-## API Groups
-
-The backend APIs are grouped as:
-
-- /api/auth/\*
-- /api/account/\*
-- /api/transaction/\*
-- /api/transaction/admin/\* (admin only)
-
-A detailed API contract with request/response examples is available in FE_README.md.
+  - User signup and login
+  - Admin login
+  - JWT-protected routes
+- Account management
+  - Create account
+  - Fetch account details
+  - List user accounts
+- Transaction management
+  - Start and confirm transaction flow
+  - Withdraw and transfer (user)
+  - Deposit (admin)
+  - Transaction history and detail APIs
+- Safety and consistency
+  - Account ownership validation
+  - Insufficient balance checks
+  - Transaction expiry window
+  - Consistent API response wrapper and global error handling
+- Platform integrations
+  - Redis for rate limiting and caching use cases
+  - Kafka for async email events
 
 ## Tech Stack
 
@@ -141,14 +34,36 @@ A detailed API contract with request/response examples is available in FE_README
 - Spring Boot
 - Spring Security
 - Spring Data JPA
-- MySQL
+- MySQL (or compatible relational database)
+- Redis
+- Kafka
 - Lombok
 
-## Local Configuration
+## Project Structure
 
-Environment values are loaded from .env and application.properties.
+Main source folders:
 
-Required values:
+- src/main/java/com/ashwinsi/bankingApplication
+  - Controller
+  - Service
+  - Repository
+  - Domain
+  - DTO
+  - Config
+  - Kafka
+- src/main/resources
+- src/test/java
+
+## Prerequisites
+
+- JDK 17+ (recommended)
+- Maven 3.8+
+- Running database
+- Docker (for Redis/Kafka/Zookeeper via compose)
+
+## Environment Configuration
+
+Configure required values using your .env / application.properties setup:
 
 - DB_URL
 - DB_USERNAME
@@ -157,69 +72,81 @@ Required values:
 - SALT
 - JWT_EXPIRATION_TIME
 
-## Development Seed Data
+Also configure any mail, Redis, and Kafka properties your environment requires.
 
-On startup, the app seeds default user/admin credentials in development if they do not exist.
+## Docker Compose (Redis + Kafka + Zookeeper)
 
-Use these only for local testing.
+Use the provided docker-compose.yml to start local infrastructure dependencies.
 
-# Banking Application
+```yaml
+version: "3.8"
+services:
+	redis:
+		image: redis:7-alpine
+		container_name: banking_redis
+		ports:
+			- "6379:6379"
+		restart: unless-stopped
 
-## Overview
-The Banking Application is a robust and secure platform designed to manage user accounts, transactions, and authentication processes. It leverages modern technologies to ensure scalability, security, and maintainability.
+	zookeeper:
+		image: confluentinc/cp-zookeeper:7.4.0
+		environment:
+			ZOOKEEPER_CLIENT_PORT: 2181
+		ports:
+			- "2181:2181"
 
-## Features
+	kafka:
+		image: confluentinc/cp-kafka:7.4.0
+		depends_on:
+			- zookeeper
+		ports:
+			- "9092:9092"
+		environment:
+			KAFKA_BROKER_ID: 1
+			KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+			KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+			KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+```
 
-### 1. Business Logic
-- **Account Management**: Create, retrieve, and manage user accounts.
-- **Transaction Management**: Start, update, and retrieve transactions.
-- **Authentication**: User and admin login, signup, and OTP-based verification.
+Start services:
 
-### 2. Security
-- **Authentication and Authorization**:
-  - JWT-based authentication for secure API access.
-  - Role-based access control with custom filters (`JwtFilter`, `AdminFilter`).
-- **Password Security**:
-  - Passwords are securely hashed using `BCryptPasswordEncoder` with a configurable salt.
-- **CORS Configuration**:
-  - Allows specific origins for frontend integration.
-- **Rate Limiting**:
-  - Implemented a Redis-based rate-limiting mechanism (`AuditLogService`) to prevent abuse of actions like login, signup, and transactions.
-  - Action thresholds and expiration times are configurable in `Constants.java`.
+```bash
+docker compose up -d
+```
 
-### 3. Caching Strategy
-- **In-Memory Caching**:
-  - The application uses an in-memory cache for frequently accessed, non-critical data to reduce database load.
-- **Redis Caching**:
-  - Redis is used for distributed caching, particularly for rate limiting and managing user action counts.
+Stop services:
 
-### 4. Asynchronous Operations with Kafka
-- **Email Service**:
-  - User-facing operations like sending OTPs and email confirmations are handled asynchronously using Kafka.
-  - An `EmailProducer` sends email-related events to a Kafka topic (`email-events`).
-  - A dedicated `EmailConsumer` processes these events to send emails without blocking the main application thread.
+```bash
+docker compose down
+```
 
-### 5. Transactional Management
-- Ensures atomicity and consistency during database operations using `@Transactional` annotations.
+## Run the Application
 
-### 6.  Concurrency Control
+Using Maven wrapper:
 
-* Implemented **optimistic locking** using a version field (`@Version`) in the Account entity to ensure safe concurrent updates.
-* Prevents race conditions and double-spending scenarios during high-frequency transactions by validating version consistency before committing updates.
+```bash
+./mvnw spring-boot:run
+```
 
-### 7. Technologies Used
-- **Backend**: Spring Boot, Spring Security, Spring Data JPA.
-- **Database**: Relational database (e.g., PostgreSQL, MySQL).
-- **Caching**: Redis.
-- **Messaging**: Kafka.
-- **Validation**: Input validation using `@Valid` annotations.
+Or build and run:
 
+```bash
+./mvnw clean package
+java -jar target/*.jar
+```
 
+## API Groups
 
-## How to Use
-- Clone the repository.
-- Configure the database connection in `application.properties`.
-- Build and run the application using Maven.
+- /api/auth/\*
+- /api/account/\*
+- /api/transaction/\*
+- /api/transaction/admin/\* (admin only)
 
----
-This README provides a high-level overview of the application and its features. For detailed documentation, refer to the source code and comments.
+## Notes
+
+- Development seed user/admin data may be initialized on startup when configured.
+- Use seed credentials only for local testing.
+
+## License
+
+Add your preferred license section here.
