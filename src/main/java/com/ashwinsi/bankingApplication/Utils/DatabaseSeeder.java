@@ -51,6 +51,6 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void printer(String content){
-        System.out.println(symbol +" " + content + " " + symbol);
+        System.out.println(symbol +" " + content);
     }
 }

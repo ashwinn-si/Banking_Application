@@ -1,50 +1,44 @@
 package com.ashwinsi.bankingApplication.Service;
 
 import com.ashwinsi.bankingApplication.DTO.CustomError;
-import com.ashwinsi.bankingApplication.DTO.EmailContentDTO;
-import com.ashwinsi.bankingApplication.Utils.EmailContextService;
-import com.ashwinsi.bankingApplication.Utils.EmailService;
+import com.ashwinsi.bankingApplication.DTO.EmailEventDTO;
+import com.ashwinsi.bankingApplication.DTO.Enum.EmailType;
+import com.ashwinsi.bankingApplication.Kafka.EmailProducer;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class EmailServiceWrapper {
-    private final EmailService emailService;
     private final AuditLogService auditLogService;
-    private final EmailContextService emailContextService;
+    private final EmailProducer emailProducer;
 
-    EmailServiceWrapper(EmailService emailService, AuditLogService auditLogService,
-            EmailContextService emailContextService) {
-        this.emailService = emailService;
-        this.auditLogService = auditLogService;
-        this.emailContextService = emailContextService;
-    }
-
-    public void sendEmail(String receiverEmail, UUID userId, String action, Integer otp)
+    public void sendEmail(String toEmail, UUID userId, String action, Integer otp)
             throws Exception {
         boolean isAllowed = auditLogService.isAllowedToPerform(userId, action);
 
-        EmailContentDTO emailContentDTO = emailContextService.getEmailContent(action, otp);
+        EmailEventDTO emailEvent =
+                new EmailEventDTO(toEmail, otp, action, userId, EmailType.OTP_EMAIL);
 
         if (isAllowed) {
-            emailService.sendEmail(receiverEmail, emailContentDTO.getSubject(),
-                    emailContentDTO.getBody(), action);
+            emailProducer.sendOtpEmail(emailEvent);
         } else {
             throw new CustomError("Email Attempts Exceeded. Try After Sometime",
                     HttpStatus.BAD_REQUEST);
         }
     }
 
-    public void sendEmail(String receiverEmail, UUID userId, String action) throws Exception {
+    public void sendEmail(String toEmail, UUID userId, String action) throws Exception {
         boolean isAllowed = auditLogService.isAllowedToPerform(userId, action);
 
-        EmailContentDTO emailContentDTO = emailContextService.getEmailContent(action);
+        EmailEventDTO emailEvent =
+                new EmailEventDTO(toEmail, null, action, userId, EmailType.INFORMATION_EMAIL);
 
         if (isAllowed) {
-            emailService.sendEmail(receiverEmail, emailContentDTO.getSubject(),
-                    emailContentDTO.getBody(), action);
+            emailProducer.sendOtpEmail(emailEvent);
         } else {
             throw new CustomError("Email Attempts Exceeded. Try After Sometime",
                     HttpStatus.BAD_REQUEST);

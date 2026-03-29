@@ -62,6 +62,10 @@ public class Constants {
     private static final int OTP_ATTEMPT_USER_SIGNUP = 3;
 
 
+    // KAFKA CONSTANTS
+    public static final String KAFKA_EMAIL_TOPIC = "email-events";
+
+
     // Thresholds and cache expiration times for actions
     public static final HashMap<String, Integer[]> ACTION_MAPPING = new HashMap<>();
 
