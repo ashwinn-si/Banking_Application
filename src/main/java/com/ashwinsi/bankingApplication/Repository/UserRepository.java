@@ -15,4 +15,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     public Optional<User> findByPhoneNumberAndIsActivated(String phoneNumber, boolean isActivated);
 
+    public Optional<User> findByEmailOrPhoneNumber(String email, String phoneNumber);
+
+    public Optional<User> findByPhoneNumberOrEmailAndIsActivated(String phoneNumber,String email, boolean isActivated);
 }

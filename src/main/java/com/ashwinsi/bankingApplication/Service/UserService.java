@@ -40,6 +40,9 @@ public class UserService {
        return user.isPresent();
     }
 
+    public Optional<User> isUserExistsByEmailOrPhone(String email, String phoneNumber){
+        return userRepository.findByEmailOrPhoneNumber(email, phoneNumber);
+    }
 
 
     protected User findUser(UUID userId, String email, String phoneNumber) throws  Exception{
@@ -55,14 +58,14 @@ public class UserService {
     }
 
     @Transactional
-    public UserDTO createUser(String email, String name, String phoneNumber, String password, String address){
+    public User createUser(String email, String name, String phoneNumber, String password, String address){
         String hashPassword = passwordEncoder.encode(password);
 
         User user = new User(name, email, hashPassword, phoneNumber, address);
 
         User savedUser = userRepository.save(user);
 
-        return new UserDTO(savedUser.getId(), savedUser.getEmail(), savedUser.getPhoneNumber(), savedUser.getPassword(), savedUser.isActivated());
+        return savedUser;
     }
 
     @Transactional

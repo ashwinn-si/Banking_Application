@@ -51,7 +51,7 @@ public class OtpController {
     @PostMapping("/signup")
     public ResponseEntity<?> signupController(@RequestBody @Valid OtpDTO otpDTO) throws Exception {
         authService.signupOtp(otpDTO.getActionId(), otpDTO.getOtp());
-        return ResponseHandler.handleResponse(HttpStatus.OK, null, "Signup Successfull", true);
+        return ResponseHandler.handleResponse(HttpStatus.OK, null, "Signup Succesfull", true);
     }
 
     @PostMapping("/resend")

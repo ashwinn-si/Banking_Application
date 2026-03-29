@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Data
@@ -100,10 +101,17 @@ public class AuthService {
     }
 
     public ActionIdDTO signup(String email, String phoneNumber, String password, String name, String address) throws Exception{
-        if(userService.isUserExists(null, email, null) || userService.isUserExists(null, null, phoneNumber)) {
+        Optional<User> user = userService.isUserExistsByEmailOrPhone(email, phoneNumber);
+        if(user.isPresent() && user.get().isActivated()) {
             throw new CustomError("Email Or PhoneNumber is linked with another user", HttpStatus.CONFLICT);
         }
-        UserDTO createdUser = userService.createUser(email, name, phoneNumber, password, address);
+
+        User createdUser;
+        if(user.isPresent() && !user.get().isActivated()){
+            createdUser = user.get();
+        } else {
+            createdUser = userService.createUser(email, name, phoneNumber, password, address);
+        }
 
         //creating a otp
         UUID actionId = generateActionId();
