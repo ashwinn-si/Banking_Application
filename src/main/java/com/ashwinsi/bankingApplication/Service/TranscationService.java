@@ -14,6 +14,7 @@ import com.ashwinsi.bankingApplication.Utils.Constants;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -92,6 +93,7 @@ class TransactionStartDTO {
 
 
 @Service
+@Slf4j
 public class TranscationService {
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
@@ -450,7 +452,6 @@ public class TranscationService {
         List<GetAllTransactionDTO> transactionDTOS = new ArrayList<>();
         for (Transaction transaction : transactionsList) {
             if (transaction.getTransactionType().equals(TransactionTypeEnum.TRANSACTION)) {
-                System.out.println(transaction.getReceiverAccount().getId() + "-------");
                 transactionDTOS.add(new GetAllTransactionDTO(transaction.getId(),
                         transaction.getSenderAccount().getId(),
                         transaction.getReceiverAccount().getId(), transaction.getTransactionType(),
@@ -500,7 +501,7 @@ public class TranscationService {
             return false;
         });
 
-        System.out.println("[TransactionService] Cache eviction ran. Remaining transactions: "
+        log.info("[TransactionService] Cache eviction ran. Remaining transactions: "
                 + transactionCache.size() + ", Remaining accountIds: "
                 + accountIdUserIdCache.size());
     }

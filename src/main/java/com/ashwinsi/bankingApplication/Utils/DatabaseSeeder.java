@@ -2,10 +2,12 @@ package com.ashwinsi.bankingApplication.Utils;
 
 import com.ashwinsi.bankingApplication.Service.AdminService;
 import com.ashwinsi.bankingApplication.Service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 @Component
+@Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
     private UserService userService;
     private AdminService adminService;
@@ -51,6 +53,6 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void printer(String content){
-        System.out.println(symbol +" " + content);
+        log.info(symbol +" " + content);
     }
 }

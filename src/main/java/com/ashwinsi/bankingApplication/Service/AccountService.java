@@ -88,7 +88,6 @@ public class AccountService {
   }
 
   public Account findAccount(UUID accountId) throws Exception {
-    System.out.println("asdasdsadsadsadsadsadasd=====" + accountId);
     Account account = accountRepository.findById(accountId)
         .orElseThrow(() -> new CustomError("Account Not Found", HttpStatus.NOT_FOUND));
     return account;

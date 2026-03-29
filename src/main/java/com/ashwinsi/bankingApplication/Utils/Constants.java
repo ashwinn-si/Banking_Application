@@ -1,10 +1,12 @@
 package com.ashwinsi.bankingApplication.Utils;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 
 @Component
+@Slf4j
 public class Constants {
     static String DEFAULT_USER_EMAIL = "admin@gmail.com";
     static String DEFAULT_USER_PASSWORD = "root";
@@ -104,7 +106,7 @@ public class Constants {
 
     public static Integer getOtpAttempts(String action){
         if(!OTP_ATTEMPTS_MAPPING.containsKey(action)){
-            System.out.println("MAPPING MISSING");
+            log.error("MAPPING MISSING");
             return 5;
         }
         return OTP_ATTEMPTS_MAPPING.get(action);
@@ -112,7 +114,7 @@ public class Constants {
 
     public static Integer[] getActionMapping(String action){
         if(!ACTION_MAPPING.containsKey(action)){
-            System.out.println("MAPPING MISSING");
+            log.error("MAPPING MISSING");
             return new Integer[]{10, 10};
         }
         return ACTION_MAPPING.get(action);
